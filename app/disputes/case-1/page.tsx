@@ -41,6 +41,43 @@ export default function DisputeCasePage() {
             </div>
           </section>
 
+          <section className="rounded-3xl border border-[#ffdad6] bg-[#fff0ee] p-6 sm:p-8">
+            <header className="mb-4 flex items-center justify-between">
+              <h2 className="font-heading text-lg font-medium text-[#ba1a1a]">Tamper Detection (Auto-Analysis)</h2>
+              <span className="rounded-full bg-[#ba1a1a] px-3 py-1 text-xs font-bold text-white">High Risk</span>
+            </header>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-white p-4 shadow-sm border border-[#ffdad6]">
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-bold text-[#001b44]">warehouse_receipt_scan.jpg</p>
+                    <p className="text-xs text-[#64748b]">Uploaded by Alem Coffee Exporters</p>
+                  </div>
+                  <div className="space-y-1 text-xs text-[#ba1a1a]">
+                    <p className="flex items-center gap-1 font-medium">⚠️ EXIF Software tag detected: Adobe Photoshop CS6</p>
+                    <p className="flex items-center gap-1 font-medium">⚠️ Error Level Analysis (ELA) max diff: 89 (Threshold: 50)</p>
+                  </div>
+                </div>
+                <button type="button" className="text-xs font-semibold text-[#002f6c] underline-offset-2 hover:underline">
+                  View Metadata
+                </button>
+              </div>
+              
+              <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-white p-4 shadow-sm border border-[#e8eaf2]">
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-bold text-[#001b44]">packing_list.pdf</p>
+                    <p className="text-xs text-[#64748b]">Uploaded by You</p>
+                  </div>
+                  <p className="text-xs font-medium text-[#146c2e]">✓ Verified (No editing software detected)</p>
+                </div>
+                <button type="button" className="text-xs font-semibold text-[#002f6c] underline-offset-2 hover:underline">
+                  View Metadata
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section className="overflow-hidden rounded-3xl border border-[#e8eaf2] bg-white">
             <header className="flex items-center gap-2 border-b border-[#f2f3ff] px-6 py-4">
               <MessageSquare className="size-5 text-[#002f6c]" strokeWidth={1.75} aria-hidden />
