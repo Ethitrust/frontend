@@ -3,9 +3,59 @@
 import { Lock, Mail, Shield, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { fetchApi } from "@/lib/api";
 
 export default function AuthPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetchApi("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.access_token) {
+        localStorage.setItem("token", res.access_token);
+        router.push("/admin/disputes"); // Route to the admin panel for testing purposes or user dashboard
+      }
+    } catch (err: any) {
+      setError("Wrong email or password. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const [first_name, ...rest] = name.trim().split(" ");
+    const last_name = rest.join(" ") || "User";
+    try {
+      const res = await fetchApi("/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({ email, password, first_name, last_name }),
+      });
+      if (res.token?.access_token) {
+        localStorage.setItem("token", res.token.access_token);
+        router.push("/admin/disputes");
+      }
+    } catch (err: any) {
+      setError("Failed to create account. Email may already be in use.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#faf8ff] px-4 py-10 sm:py-16">
@@ -47,7 +97,7 @@ export default function AuthPage() {
           </div>
 
           {tab === "login" ? (
-            <form className="space-y-5 px-8 py-8" noValidate>
+            <form className="space-y-5 px-8 py-8" noValidate onSubmit={handleLogin}>
               <div>
                 <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#001b44]">Welcome back</h1>
                 <p className="mt-1 text-sm text-[#434750]">Sign in to manage escrows, wallet, and disputes.</p>
@@ -62,6 +112,9 @@ export default function AuthPage() {
                     placeholder="name@example.com"
                     type="email"
                     autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </span>
               </label>
@@ -75,20 +128,26 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     type="password"
                     autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                 </span>
               </label>
 
-              <div className="rounded-lg border border-[#ffdad6] bg-[rgba(255,218,214,0.35)] px-4 py-3 text-sm text-[#ba1a1a]">
-                Wrong password. Please try again.
-              </div>
+              {error && (
+                <div className="rounded-lg border border-[#ffdad6] bg-[rgba(255,218,214,0.35)] px-4 py-3 text-sm text-[#ba1a1a]">
+                  {error}
+                </div>
+              )}
 
-              <Link
-                className="flex w-full items-center justify-center rounded-xl bg-[#002f6c] px-4 py-3.5 text-center text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,47,108,0.25)]"
-                href="/dashboard/user"
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center rounded-xl bg-[#002f6c] px-4 py-3.5 text-center text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,47,108,0.25)] disabled:opacity-70"
               >
-                Login to EthiTrust
-              </Link>
+                {loading ? "Logging in..." : "Login to EthiTrust"}
+              </button>
 
               <p className="text-center text-sm text-[#434750]">
                 New here?{" "}
@@ -98,7 +157,7 @@ export default function AuthPage() {
               </p>
             </form>
           ) : (
-            <form className="space-y-5 px-8 py-8" noValidate>
+            <form className="space-y-5 px-8 py-8" noValidate onSubmit={handleSignup}>
               <div>
                 <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#001b44]">Create your account</h1>
                 <p className="mt-1 text-sm text-[#434750]">Individual or business — you can upgrade to KYB later.</p>
@@ -113,6 +172,9 @@ export default function AuthPage() {
                     placeholder="Selam Tadesse"
                     type="text"
                     autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
                   />
                 </span>
               </label>
@@ -126,6 +188,9 @@ export default function AuthPage() {
                     placeholder="name@example.com"
                     type="email"
                     autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </span>
               </label>
@@ -139,15 +204,25 @@ export default function AuthPage() {
                     placeholder="At least 8 characters"
                     type="password"
                     autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                 </span>
               </label>
 
+              {error && (
+                <div className="rounded-lg border border-[#ffdad6] bg-[rgba(255,218,214,0.35)] px-4 py-3 text-sm text-[#ba1a1a]">
+                  {error}
+                </div>
+              )}
+
               <button
-                type="button"
-                className="w-full rounded-xl bg-[#69ff87] px-4 py-3.5 text-sm font-bold text-[#002108] shadow-[0_10px_24px_rgba(105,255,135,0.25)]"
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-[#69ff87] px-4 py-3.5 text-sm font-bold text-[#002108] shadow-[0_10px_24px_rgba(105,255,135,0.25)] disabled:opacity-70"
               >
-                Continue
+                {loading ? "Creating..." : "Continue"}
               </button>
 
               <p className="text-center text-sm text-[#434750]">
