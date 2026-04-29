@@ -75,7 +75,7 @@ export function UserShell({ children, fab = false }: UserShellProps) {
             <Plus className="size-4 shrink-0" strokeWidth={2.25} />
             New Transaction
           </Link>
-        </aside>``
+        </aside>
 
         <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 flex h-[72px] shrink-0 items-center justify-between gap-6 bg-[rgba(255,255,255,0.8)] px-8 backdrop-blur-[10px] border-b border-[#f1f5f9]">
