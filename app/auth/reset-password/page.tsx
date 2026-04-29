@@ -27,7 +27,7 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
-    
+
     // Mock API call
     setTimeout(() => {
       alert("Password successfully reset! Please login with your new password.");
