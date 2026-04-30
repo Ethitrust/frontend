@@ -24,12 +24,18 @@ export default function AuthPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      if (res.access_token) {
-        localStorage.setItem("token", res.access_token);
-        router.push("/admin/disputes"); // Route to the admin panel for testing purposes or user dashboard
+      const access = res.access_token ?? res.token?.access_token ?? res.data?.access_token;
+      const refresh = res.refresh_token ?? res.token?.refresh_token ?? res.data?.refresh_token;
+      if (access) {
+        localStorage.setItem("token", access);
+        if (refresh) localStorage.setItem("refresh", refresh);
+        router.push("/admin/disputes");
+        return;
       }
+      setError(res?.message ?? "Login failed. Please try again.");
     } catch (err: any) {
-      setError("Wrong email or password. Please try again.");
+      const msg = err?.body?.detail || err?.body?.message || err?.message || "Wrong email or password. Please try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -46,12 +52,18 @@ export default function AuthPage() {
         method: "POST",
         body: JSON.stringify({ email, password, first_name, last_name }),
       });
-      if (res.token?.access_token) {
-        localStorage.setItem("token", res.token.access_token);
+      const access = res.access_token ?? res.token?.access_token ?? res.data?.access_token;
+      const refresh = res.refresh_token ?? res.token?.refresh_token ?? res.data?.refresh_token;
+      if (access) {
+        localStorage.setItem("token", access);
+        if (refresh) localStorage.setItem("refresh", refresh);
         router.push("/admin/disputes");
+        return;
       }
+      setError(res?.message ?? "Failed to create account. Please try again.");
     } catch (err: any) {
-      setError("Failed to create account. Email may already be in use.");
+      const msg = err?.body?.detail || err?.body?.message || err?.message || "Failed to create account. Email may already be in use.";
+      setError(msg);
     } finally {
       setLoading(false);
     }

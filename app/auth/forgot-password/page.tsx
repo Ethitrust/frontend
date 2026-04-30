@@ -4,6 +4,7 @@ import { Mail, Shield } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { fetchApi } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -16,16 +17,19 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
-    // Mock API call
-    setTimeout(() => {
-      if (email.includes("@")) {
-        setSuccess(true);
-      } else {
+    try {
+      if (!email || !email.includes("@")) {
         setError("Please enter a valid email address.");
+        return;
       }
+      await fetchApi("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+      setSuccess(true);
+    } catch (err: any) {
+      const msg = err?.body?.detail || err?.body?.message || err?.message || "Failed to send reset link.";
+      setError(msg);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (

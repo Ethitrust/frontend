@@ -3,7 +3,8 @@
 import { Lock, Shield } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { fetchApi } from "@/lib/api";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -11,6 +12,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,13 +28,32 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    setLoading(true);
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please try again.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
 
-    // Mock API call
-    setTimeout(() => {
-      alert("Password successfully reset! Please login with your new password.");
-      router.push("/auth");
-    }, 1000);
+    const token = searchParams.get('token') || searchParams.get('t');
+    if (!token) {
+      setError("Invalid or expired reset link.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await fetchApi('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) });
+      alert('Password successfully reset! Please login with your new password.');
+      router.push('/auth');
+    } catch (err: any) {
+      const msg = err?.body?.detail || err?.body?.message || err?.message || 'Failed to reset password.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

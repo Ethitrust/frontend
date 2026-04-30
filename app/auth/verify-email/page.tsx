@@ -4,6 +4,7 @@ import { KeyRound, Shield } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { fetchApi } from "@/lib/api";
 
 export default function VerifyEmailPage() {
   const [code, setCode] = useState("");
@@ -15,16 +16,16 @@ export default function VerifyEmailPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
-    // Mock API call
-    setTimeout(() => {
-      if (code === "123456") {
-        router.push("/admin/disputes");
-      } else {
-        setError("Invalid verification code. Please try again.");
-        setLoading(false);
-      }
-    }, 1000);
+    try {
+      const res = await fetchApi('/auth/verify-email', { method: 'POST', body: JSON.stringify({ code }) });
+      // success
+      router.push('/admin/disputes');
+    } catch (err: any) {
+      const msg = err?.body?.detail || err?.body?.message || err?.message || 'Invalid verification code. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +79,18 @@ export default function VerifyEmailPage() {
 
             <p className="text-center text-sm text-[#434750]">
               Didn't receive a code?{" "}
-              <button type="button" onClick={() => alert("Code resent!")} className="font-semibold text-[#002f6c] underline-offset-2 hover:underline">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await fetchApi('/auth/verify-email/resend', { method: 'POST' });
+                    alert('Verification code resent.');
+                  } catch (_) {
+                    alert('Failed to resend code.');
+                  }
+                }}
+                className="font-semibold text-[#002f6c] underline-offset-2 hover:underline"
+              >
                 Resend code
               </button>
             </p>
