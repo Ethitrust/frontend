@@ -1,26 +1,37 @@
-import { Bell, KeyRound, MonitorSmartphone, Settings as SettingsIcon, Shield } from "lucide-react";
+import { Bell, KeyRound, MonitorSmartphone, Settings as SettingsIcon, Shield, UserRound } from "lucide-react";
+import Link from "next/link";
 import { UserShell } from "@/components/user-shell";
 
 const sections = [
   {
+    title: "Profile",
+    body: "Name, contact, and account details.",
+    icon: UserRound,
+    href: "/settings/profile",
+  },
+  {
     title: "Security",
     body: "Multi-factor authentication, trusted devices, and session revoke.",
     icon: Shield,
+    href: "/settings/security",
   },
   {
     title: "Notifications",
     body: "Escrow events, dispute updates, and weekly statements.",
     icon: Bell,
+    href: "/settings/notifications",
   },
   {
     title: "API keys",
     body: "Rotate keys and manage webhooks (business tier).",
     icon: KeyRound,
+    href: "/settings/developer",
   },
   {
     title: "Sessions",
     body: "See where you are signed in and sign out remotely.",
     icon: MonitorSmartphone,
+    href: "/settings/security",
   },
 ];
 
@@ -49,9 +60,9 @@ export default function SettingsPage() {
                 <div className="min-w-0">
                   <h2 className="font-heading text-base font-normal text-[#001b44]">{s.title}</h2>
                   <p className="mt-1 text-sm leading-relaxed text-[#434750]">{s.body}</p>
-                  <button type="button" className="mt-4 text-sm font-semibold text-[#002f6c]">
+                  <Link href={s.href || '#'} className="mt-4 inline-block text-sm font-semibold text-[#002f6c]">
                     Configure
-                  </button>
+                  </Link>
                 </div>
               </div>
             </section>
