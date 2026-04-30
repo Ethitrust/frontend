@@ -51,9 +51,9 @@ export default function BusinessDashboardPage() {
       <section className="overflow-hidden rounded-3xl border border-[#e8eaf2] bg-white">
         <header className="flex items-center justify-between border-b border-[#f2f3ff] px-6 py-5">
           <h2 className="font-heading text-lg font-normal text-[#001b44]">Team &amp; roles</h2>
-          <button type="button" className="text-sm font-semibold text-[#002f6c]">
-            Invite member
-          </button>
+          <Link href="/organization/team" className="text-sm font-semibold text-[#002f6c] hover:underline underline-offset-2">
+            Manage team
+          </Link>
         </header>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
