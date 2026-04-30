@@ -27,6 +27,7 @@ const MAIN_NAV: {
   { href: "/admin/analytics", label: "Analytics", Icon: BarChart3, isActive: (p) => p.startsWith("/admin/analytics") },
   { href: "/admin/forensics", label: "Forensic Tools", Icon: FlaskConical, isActive: (p) => p.startsWith("/admin/forensics") },
   { href: "/admin/users", label: "User Management", Icon: Users, isActive: (p) => p.startsWith("/admin/users") },
+  { href: "/admin/audit", label: "Audit & Trace", Icon: History, isActive: (p) => p.startsWith("/admin/audit") },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

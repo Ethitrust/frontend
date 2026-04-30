@@ -24,6 +24,15 @@ export async function requestMoreInfo(id: string, payload: any = {}) {
   return fetchApi(`/admin/verifications/${id}/request-info`, { method: "POST", body: JSON.stringify(payload) });
 }
 
+export async function getAuditLogs(params?: Record<string, any>) {
+  const qs = params ? new URLSearchParams(params as any).toString() : "";
+  return fetchApi(`/admin/audit-logs${qs ? `?${qs}` : ""}`);
+}
+
+export async function getEscrowStateHistory(escrowId: string) {
+  return fetchApi(`/admin/escrows/${escrowId}/history`);
+}
+
 export default {
   getVerificationQueue,
   getVerification,
@@ -31,4 +40,6 @@ export default {
   approveVerification,
   rejectVerification,
   requestMoreInfo,
+  getAuditLogs,
+  getEscrowStateHistory,
 };
