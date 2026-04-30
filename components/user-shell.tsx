@@ -22,12 +22,12 @@ const USER_NAV: {
   Icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   isActive: (path: string) => boolean;
 }[] = [
-  { href: "/dashboard/user", label: "Dashboard", Icon: LayoutDashboard, isActive: (p) => p === "/dashboard/user" },
-  { href: "/escrow/create", label: "Escrows", Icon: HandCoins, isActive: (p) => p.startsWith("/escrow") },
-  { href: "/wallet", label: "Wallet", Icon: Wallet, isActive: (p) => p.startsWith("/wallet") },
-  { href: "/disputes/case-1", label: "Disputes", Icon: Gavel, isActive: (p) => p.startsWith("/disputes") },
-  { href: "/settings", label: "Settings", Icon: Settings, isActive: (p) => p.startsWith("/settings") },
-];
+    { href: "/dashboard/user", label: "Dashboard", Icon: LayoutDashboard, isActive: (p) => p === "/dashboard/user" },
+    { href: "/escrow/create", label: "Escrows", Icon: HandCoins, isActive: (p) => p.startsWith("/escrow") },
+    { href: "/wallet", label: "Wallet", Icon: Wallet, isActive: (p) => p.startsWith("/wallet") },
+    { href: "/disputes/case-1", label: "Disputes", Icon: Gavel, isActive: (p) => p.startsWith("/disputes") },
+    { href: "/settings", label: "Settings", Icon: Settings, isActive: (p) => p.startsWith("/settings") },
+  ];
 
 type UserShellProps = {
   children: React.ReactNode;
@@ -56,11 +56,10 @@ export function UserShell({ children, fab = false }: UserShellProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 py-3 pl-4 pr-5 ${
-                      active
+                    className={`flex items-center gap-3 py-3 pl-4 pr-5 ${active
                         ? "border-r-4 border-[#006e2a] bg-[rgba(226,232,240,0.5)] font-normal text-[#001b44]"
                         : "text-[#64748b]"
-                    }`}
+                      }`}
                   >
                     <Icon className="size-[22px] shrink-0" strokeWidth={1.75} />
                     <span className="font-heading text-sm tracking-[-0.35px]">{item.label}</span>
@@ -71,39 +70,51 @@ export function UserShell({ children, fab = false }: UserShellProps) {
           </div>
           <Link
             href="/escrow/create"
-            className="mt-8 flex items-center justify-center gap-2 rounded-xl bg-[#002f6c] px-6 py-4 text-center text-sm font-normal text-white"
+            className="mt-8 flex items-center justify-center gap-2 rounded-xl bg-[#002f6c] px-6 py-4 text-center text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(0,47,108,0.2)]"
           >
             <Plus className="size-4 shrink-0" strokeWidth={2.25} />
-            Create New Escrow
+            New Transaction
           </Link>
         </aside>
 
         <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-6 bg-[rgba(255,255,255,0.6)] px-8 backdrop-blur-[10px]">
-            <label className="relative min-w-0 flex-1">
+          <header className="sticky top-0 z-20 flex h-[72px] shrink-0 items-center justify-between gap-6 bg-[rgba(255,255,255,0.8)] px-8 backdrop-blur-[10px] border-b border-[#f1f5f9]">
+            <label className="relative w-[320px] max-w-full">
               <span className="sr-only">Search</span>
               <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#64748b]"
-                strokeWidth={1.75}
+                className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-[#94a3b8]"
+                strokeWidth={2}
               />
               <input
                 type="search"
-                placeholder="Search transactions, sellers, or IDs..."
-                className="w-full rounded-lg bg-[#dae2fd] py-2.5 pl-10 pr-3 text-sm text-[#001b44] outline-none placeholder:text-[#6b7280] focus:ring-2 focus:ring-[#002f6c]"
+                placeholder="Search transactions..."
+                className="w-full rounded-full border border-[#e2e8f0] bg-white py-2 pl-10 pr-4 text-[13px] text-[#001b44] outline-none transition-shadow placeholder:text-[#94a3b8] focus:border-[#002f6c] focus:ring-1 focus:ring-[#002f6c] shadow-sm"
               />
             </label>
-            <div className="flex shrink-0 items-center gap-6">
-              <button type="button" className="rounded-full p-2 text-[#434750] hover:bg-[#e2e8f0]/80" aria-label="Notifications">
-                <Bell className="size-5" strokeWidth={1.75} />
+            <div className="flex shrink-0 items-center gap-5">
+              <button type="button" className="text-[#64748b] transition-colors hover:text-[#001b44]" aria-label="Notifications">
+                <Bell className="size-5" strokeWidth={2} />
               </button>
-              <button type="button" className="rounded-full p-2 text-[#434750] hover:bg-[#e2e8f0]/80" aria-label="Help">
-                <CircleHelp className="size-5" strokeWidth={1.75} />
+              <button type="button" className="text-[#64748b] transition-colors hover:text-[#001b44]" aria-label="History">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg>
               </button>
-              <div
-                className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-[#c4c6d2] bg-[#e8ecf4] text-[#002f6c]"
-                aria-hidden
-              >
-                <UserRound className="size-[18px]" strokeWidth={1.75} />
+              <div className="h-6 w-px bg-[#e2e8f0]"></div>
+              <div className="flex items-center gap-3">
+                <span className="text-[13px] font-bold text-[#001b44]">Abebe Kebede</span>
+                <div
+                  className="flex size-[34px] items-center justify-center overflow-hidden rounded-full border border-[#e2e8f0] bg-[#f1f5f9] text-[#64748b]"
+                  aria-hidden
+                >
+                  {/* Using a simple placeholder drawing representing a user avatar */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" className="size-full">
+                    <rect width="100" height="100" fill="#f1f5f9" />
+                    <circle cx="50" cy="40" r="18" fill="#e2e8f0" />
+                    <path d="M50 65C30 65 15 80 15 100H85C85 80 70 65 50 65Z" fill="#e2e8f0" />
+                    {/* Add a slightly more realistic look based on the image */}
+                    <circle cx="50" cy="40" r="16" fill="#fcd3b6" />
+                    <path d="M50 62C32 62 18 78 18 100H82C82 78 68 62 50 62Z" fill="#001b44" />
+                  </svg>
+                </div>
               </div>
             </div>
           </header>

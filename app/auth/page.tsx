@@ -120,7 +120,12 @@ export default function AuthPage() {
               </label>
 
               <label className="block">
-                <span className="text-xs font-normal uppercase tracking-[1.2px] text-[#434750]">Password</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-normal uppercase tracking-[1.2px] text-[#434750]">Password</span>
+                  <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#002f6c] underline-offset-2 hover:underline" tabIndex={-1}>
+                    Forgot password?
+                  </Link>
+                </div>
                 <span className="relative mt-2 block">
                   <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#64748b]" strokeWidth={1.75} aria-hidden />
                   <input
