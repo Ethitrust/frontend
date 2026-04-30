@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ShieldCheck, Lock, CreditCard, Wallet, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import PayWidget from "./pay-widget";
 
 const MOCK_LINKS: Record<string, any> = {
   "pl_8841": {
@@ -72,36 +73,7 @@ export default async function PublicCheckoutPage({
               <p className="text-slate-500 mb-6">This payment link has already been fulfilled and the funds are secured in escrow.</p>
             </div>
           ) : (
-            <>
-              <div className="flex items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-8">
-                <Lock className="size-5 text-blue-500 shrink-0" strokeWidth={2} />
-                <p className="text-xs text-blue-900/80 leading-relaxed">
-                  Your funds will be held securely in escrow. They are only released to the seller once you confirm receipt of the service/goods.
-                </p>
-              </div>
-
-              <div className="space-y-4 mb-8">
-                <label className="flex items-center justify-between p-4 border-2 border-emerald-500 bg-emerald-50/30 rounded-xl cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <Wallet className="size-5 text-emerald-600" strokeWidth={2} />
-                    <span className="font-semibold text-[#001b44]">Telebirr Wallet</span>
-                  </div>
-                  <div className="w-5 h-5 rounded-full border-4 border-emerald-500 bg-white"></div>
-                </label>
-                
-                <label className="flex items-center justify-between p-4 border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-colors opacity-60">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="size-5 text-slate-500" strokeWidth={2} />
-                    <span className="font-medium text-slate-600">Bank Transfer <span className="text-xs font-normal ml-1">(Coming soon)</span></span>
-                  </div>
-                  <div className="w-5 h-5 rounded-full border-2 border-slate-300"></div>
-                </label>
-              </div>
-
-              <button className="w-full bg-[#69ff87] hover:bg-[#52e87c] text-[#002108] font-bold py-4 rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98] text-lg">
-                Fund Escrow Now
-              </button>
-            </>
+            <PayWidget linkId={link_id} data={data} />
           )}
         </div>
 
