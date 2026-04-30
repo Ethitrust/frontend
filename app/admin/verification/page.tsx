@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, FileText, RefreshCw } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
+import HeatmapViewer from "@/components/heatmap-viewer";
 import * as adminApi from "@/lib/admin";
 
 type QueueItem = {
@@ -253,8 +254,14 @@ export default function AdminVerificationPage() {
                         <div className="space-y-4">
                           <div>
                             <p className="text-sm font-semibold text-[#0a2540]">ELA Heatmap</p>
-                            {forensics.ela_heatmap_url ? (
-                              <img src={forensics.ela_heatmap_url} alt="ELA heatmap" className="mt-2 w-full rounded-md border" />
+                            {forensics.ela_heatmap_url || forensics.original_image_url ? (
+                              <div className="mt-2">
+                                <HeatmapViewer
+                                  originalUrl={forensics.original_image_url ?? selected.documents?.[0]?.url}
+                                  heatmapUrl={forensics.ela_heatmap_url}
+                                  reasoningCards={forensics.reasoning_cards ?? []}
+                                />
+                              </div>
                             ) : (
                               <div className="mt-2 text-sm text-slate-400">No heatmap available.</div>
                             )}
