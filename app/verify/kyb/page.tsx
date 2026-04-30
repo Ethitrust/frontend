@@ -6,10 +6,11 @@ import { UserShell } from "@/components/user-shell";
 import { fetchApi } from "@/lib/api";
 import { uploadFileToUrl } from "@/lib/upload";
 
-const phases = [
-  { n: 1, label: "Business profile", state: "current" as const },
-  { n: 2, label: "Documents", state: "upcoming" as const },
-  { n: 3, label: "Signatory", state: "upcoming" as const },
+type PhaseState = "current" | "upcoming" | "done";
+const phases: { n: number; label: string; state: PhaseState }[] = [
+  { n: 1, label: "Business profile", state: "current" },
+  { n: 2, label: "Documents", state: "upcoming" },
+  { n: 3, label: "Signatory", state: "upcoming" },
 ];
 
 export default function KybPage() {
