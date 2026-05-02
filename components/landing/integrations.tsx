@@ -22,7 +22,7 @@ export function Integrations() {
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">
               {[
-                { k: "Integrations", v: "Telebirr, CBE Birr, Dashen Pay" },
+                { k: "Integrations", v: "Chapa" },
                 { k: "SDKs", v: "TypeScript, Python, Java" },
                 { k: "Events", v: "Webhooks + REST API" },
                 { k: "Identity", v: "KYB, Trade License, TIN" },

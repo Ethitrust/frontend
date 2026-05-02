@@ -99,7 +99,7 @@ export function Hero() {
               Integrated with
             </p>
             <ul className="grid grid-cols-2 gap-x-10 gap-y-4 sm:grid-cols-3 md:flex md:items-center md:gap-12">
-              {["Telebirr", "CBE Birr", "Dashen Pay", "Awash Bank", "Amole"].map((b) => (
+              {["Chapa"].map((b) => (
                 <li
                   key={b}
                   className="font-serif text-lg tracking-tight text-foreground/70"

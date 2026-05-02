@@ -5,7 +5,7 @@ const PARTNERS = [
   },
   {
     category: "Payment Partners",
-    logos: ["Telebirr", "CBE Birr", "Amole", "HelloCash"],
+    logos: ["Chapa"],
   },
   {
     category: "Industry Partners",

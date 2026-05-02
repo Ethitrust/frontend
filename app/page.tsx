@@ -7,7 +7,7 @@ import { Stats } from "@/components/landing/stats"
 import { Features } from "@/components/landing/features"
 import { Integrations } from "@/components/landing/integrations"
 import { Testimonial } from "@/components/landing/testimonial"
-import { Partners } from "@/components/landing/partners"
+
 import { Pricing } from "@/components/landing/pricing"
 import { FAQ } from "@/components/landing/faq"
 import { CTA } from "@/components/landing/cta"
@@ -24,7 +24,7 @@ export default function Page() {
       <Features />
       <Integrations />
       <Testimonial />
-      <Partners />
+
       <Pricing />
       <FAQ />
       <CTA />
