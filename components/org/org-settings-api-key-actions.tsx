@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Copy } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Copy } from "lucide-react";
+import { toast } from "sonner";
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,72 +14,76 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { postOrgApiKey } from '@/lib/org/org-organizations-api'
-import { useAuthStore } from '@/stores/auth-store'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { postOrgApiKey } from "@/lib/org/org-organizations-api";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function OrgSettingsApiKeyActions({ orgId }: { orgId: string }) {
-  const [open, setOpen] = useState(false)
-  const [keyName, setKeyName] = useState('')
-  const [createdSecret, setCreatedSecret] = useState<string | null>(null)
+  const [open, setOpen] = useState(false);
+  const [keyName, setKeyName] = useState("");
+  const [createdSecret, setCreatedSecret] = useState<string | null>(null);
 
-  const accessToken = useAuthStore((s) => s.accessToken)
-  const queryClient = useQueryClient()
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const queryClient = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: (name: string) => postOrgApiKey(accessToken!, orgId, name),
     onSuccess: (res) => {
-      void queryClient.invalidateQueries({ queryKey: ['me', 'organizations', orgId, 'api-keys'] })
+      void queryClient.invalidateQueries({
+        queryKey: ["me", "organizations", orgId, "api-keys"],
+      });
       if (res.api_key) {
-        setCreatedSecret(res.api_key)
+        setCreatedSecret(res.api_key);
       } else {
-        toast.success('API key created')
-        setKeyName('')
-        setOpen(false)
+        toast.success("API key created");
+        setKeyName("");
+        setOpen(false);
       }
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : 'Could not create API key'),
-  })
+      toast.error(
+        err instanceof Error ? err.message : "Could not create API key",
+      ),
+  });
 
   function handleOpenChange(next: boolean) {
-    setOpen(next)
+    setOpen(next);
     if (!next) {
-      setKeyName('')
-      setCreatedSecret(null)
+      setKeyName("");
+      setCreatedSecret(null);
     }
   }
 
   function submit() {
-    const name = keyName.trim()
+    const name = keyName.trim();
     if (!name) {
-      toast.error('Enter a key name')
-      return
+      toast.error("Enter a key name");
+      return;
     }
     if (!accessToken) {
-      toast.error('Sign in required')
-      return
+      toast.error("Sign in required");
+      return;
     }
-    createMutation.mutate(name)
+    createMutation.mutate(name);
   }
 
   async function copySecret() {
-    if (!createdSecret) return
+    if (!createdSecret) return;
     try {
-      await navigator.clipboard.writeText(createdSecret)
-      toast.success('Copied to clipboard')
+      await navigator.clipboard.writeText(createdSecret);
+      toast.success("Copied to clipboard");
     } catch {
-      toast.error('Could not copy')
+      toast.error("Could not copy");
     }
   }
 
   function done() {
-    toast.success('API key created')
-    setKeyName('')
-    setCreatedSecret(null)
-    setOpen(false)
+    toast.success("API key created");
+    setKeyName("");
+    setCreatedSecret(null);
+    setOpen(false);
   }
 
   return (
@@ -100,14 +104,25 @@ export function OrgSettingsApiKeyActions({ orgId }: { orgId: string }) {
               <DialogHeader>
                 <DialogTitle>Save your API key</DialogTitle>
                 <DialogDescription>
-                  This value is shown only once. Store it somewhere safe before closing.
+                  This value is shown only once. Store it somewhere safe before
+                  closing.
                 </DialogDescription>
               </DialogHeader>
               <Alert>
                 <AlertTitle>Secret</AlertTitle>
                 <AlertDescription className="mt-2 space-y-2">
-                  <Input readOnly className="font-mono text-xs" value={createdSecret} />
-                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => void copySecret()}>
+                  <Input
+                    readOnly
+                    className="font-mono text-xs"
+                    value={createdSecret}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => void copySecret()}
+                  >
                     <Copy className="size-4" aria-hidden />
                     Copy
                   </Button>
@@ -124,7 +139,11 @@ export function OrgSettingsApiKeyActions({ orgId }: { orgId: string }) {
               <DialogHeader>
                 <DialogTitle>Create API key</DialogTitle>
                 <DialogDescription>
-                  POST <span className="font-mono text-xs">…/organizations/{'{org_id}'}/api-keys</span> with{' '}
+                  POST{" "}
+                  <span className="font-mono text-xs">
+                    …/organizations/{"{org_id}"}/api-keys
+                  </span>{" "}
+                  with{" "}
                   <span className="font-mono text-xs">{`{ key_name }`}</span>.
                 </DialogDescription>
               </DialogHeader>
@@ -137,15 +156,20 @@ export function OrgSettingsApiKeyActions({ orgId }: { orgId: string }) {
                   placeholder="e.g. production-payouts"
                   className="rounded-lg"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      submit()
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submit();
                     }
                   }}
                 />
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" className="rounded-full" onClick={() => handleOpenChange(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => handleOpenChange(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -154,7 +178,7 @@ export function OrgSettingsApiKeyActions({ orgId }: { orgId: string }) {
                   disabled={createMutation.isPending || !keyName.trim()}
                   onClick={submit}
                 >
-                  {createMutation.isPending ? 'Creating…' : 'Create'}
+                  {createMutation.isPending ? "Creating…" : "Create"}
                 </Button>
               </DialogFooter>
             </>
@@ -162,5 +186,5 @@ export function OrgSettingsApiKeyActions({ orgId }: { orgId: string }) {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

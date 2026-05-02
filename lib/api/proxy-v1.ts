@@ -1,5 +1,5 @@
-import { getApiBaseUrl } from '@/lib/api/auth-upstream'
-import { formatUpstreamJsonError } from '@/lib/api/upstream-errors'
+import { getApiBaseUrl } from "@/lib/api/auth-upstream";
+import { formatUpstreamJsonError } from "@/lib/api/upstream-errors";
 
 /**
  * Proxies an authenticated request to `GET ${NEXT_API_URL}{pathnameAndQuery}`
@@ -10,314 +10,364 @@ export async function proxyV1GetJson(
   request: Request,
   pathnameAndQuery: string,
 ): Promise<Response> {
-  const base = getApiBaseUrl()
+  const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: 'Server is not configured (NEXT_API_URL).' },
+      { error: "Server is not configured (NEXT_API_URL)." },
       { status: 503 },
-    )
+    );
   }
 
-  const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization')
+  const authHeader =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
   if (!authHeader) {
-    return Response.json({ error: 'Authentication required.' }, { status: 401 })
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
   }
 
-  const url = `${base}${pathnameAndQuery.startsWith('/') ? pathnameAndQuery : `/${pathnameAndQuery}`}`
-  let res: Response
+  const url = `${base}${pathnameAndQuery.startsWith("/") ? pathnameAndQuery : `/${pathnameAndQuery}`}`;
+  let res: Response;
   try {
     res = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
         Authorization: authHeader,
       },
-      cache: 'no-store',
-    })
+      cache: "no-store",
+    });
   } catch {
     return Response.json(
-      { error: 'Could not reach the API. Check your connection.' },
+      { error: "Could not reach the API. Check your connection." },
       { status: 502 },
-    )
+    );
   }
 
-  const contentType = res.headers.get('content-type') ?? ''
-  if (!contentType.includes('application/json')) {
-    const text = await res.text()
-    const message = text.slice(0, 280) || 'Unexpected response from API.'
-    return Response.json({ error: res.ok ? message : message || 'Request failed' }, {
-      status: res.ok ? 502 : res.status,
-    })
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    const message = text.slice(0, 280) || "Unexpected response from API.";
+    return Response.json(
+      { error: res.ok ? message : message || "Request failed" },
+      {
+        status: res.ok ? 502 : res.status,
+      },
+    );
   }
 
-  let data: unknown
+  let data: unknown;
   try {
-    data = await res.json()
+    data = await res.json();
   } catch {
-    return Response.json({ error: 'Invalid JSON from API.' }, { status: res.ok ? 502 : res.status })
+    return Response.json(
+      { error: "Invalid JSON from API." },
+      { status: res.ok ? 502 : res.status },
+    );
   }
 
   if (!res.ok) {
-    const message = formatUpstreamJsonError(data)
-    if (process.env.NODE_ENV === 'development' && res.status >= 500) {
-      console.error('[proxyV1GetJson] upstream GET failed', { url, status: res.status, body: data })
+    const message = formatUpstreamJsonError(data);
+    if (process.env.NODE_ENV === "development" && res.status >= 500) {
+      console.error("[proxyV1GetJson] upstream GET failed", {
+        url,
+        status: res.status,
+        body: data,
+      });
       return Response.json(
         { error: message, upstream: data },
         { status: res.status },
-      )
+      );
     }
-    return Response.json({ error: message }, { status: res.status })
+    return Response.json({ error: message }, { status: res.status });
   }
 
-  return Response.json(data, { status: res.status })
+  return Response.json(data, { status: res.status });
 }
 
 /**
  * Proxies `POST ${NEXT_API_URL}{pathname}` with the incoming JSON body (and Content-Type).
  * `pathname` must start with `/api/v1`.
  */
-export async function proxyV1PostJson(request: Request, pathname: string): Promise<Response> {
-  const base = getApiBaseUrl()
+export async function proxyV1PostJson(
+  request: Request,
+  pathname: string,
+): Promise<Response> {
+  const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: 'Server is not configured (NEXT_API_URL).' },
+      { error: "Server is not configured (NEXT_API_URL)." },
       { status: 503 },
-    )
+    );
   }
 
-  const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization')
+  const authHeader =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
   if (!authHeader) {
-    return Response.json({ error: 'Authentication required.' }, { status: 401 })
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
   }
 
-  const bodyText = await request.text()
+  const bodyText = await request.text();
   const contentType =
-    request.headers.get('content-type')?.trim() || 'application/json'
+    request.headers.get("content-type")?.trim() || "application/json";
 
-  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
-  const url = `${base}${path}`
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${base}${path}`;
 
-  let res: Response
+  let res: Response;
   try {
     const fwdHeaders: Record<string, string> = {
-      Accept: 'application/json',
-      'Content-Type': contentType,
+      Accept: "application/json",
+      "Content-Type": contentType,
       Authorization: authHeader,
-    }
+    };
     const idem =
-      request.headers.get('x-idempotency-key') ?? request.headers.get('X-Idempotency-Key')
+      request.headers.get("x-idempotency-key") ??
+      request.headers.get("X-Idempotency-Key");
     if (idem?.trim()) {
-      fwdHeaders['X-Idempotency-Key'] = idem.trim()
+      fwdHeaders["X-Idempotency-Key"] = idem.trim();
     }
     res = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: fwdHeaders,
       body: bodyText.length > 0 ? bodyText : undefined,
-      cache: 'no-store',
-    })
+      cache: "no-store",
+    });
   } catch {
     return Response.json(
-      { error: 'Could not reach the API. Check your connection.' },
+      { error: "Could not reach the API. Check your connection." },
       { status: 502 },
-    )
+    );
   }
 
-  const location = res.headers.get('Location') ?? res.headers.get('location')
-  const rawText = await res.text().catch(() => '')
+  const location = res.headers.get("Location") ?? res.headers.get("location");
+  const rawText = await res.text().catch(() => "");
 
-  let data: unknown
+  let data: unknown;
   if (rawText.trim()) {
     try {
-      data = JSON.parse(rawText) as unknown
+      data = JSON.parse(rawText) as unknown;
     } catch {
-      data = { raw: rawText }
+      data = { raw: rawText };
     }
   } else {
-    data = {}
+    data = {};
   }
 
   if (!res.ok) {
     return Response.json(
       {
         error: formatUpstreamJsonError(
-          typeof data === 'object' && data !== null ? data : { detail: String(data) },
+          typeof data === "object" && data !== null
+            ? data
+            : { detail: String(data) },
         ),
       },
       { status: res.status },
-    )
+    );
   }
 
   const envelope: Record<string, unknown> =
-    typeof data === 'object' && data !== null && !Array.isArray(data)
+    typeof data === "object" && data !== null && !Array.isArray(data)
       ? { ...(data as Record<string, unknown>) }
-      : { payload: data }
+      : { payload: data };
 
   const hasCheckout =
-    typeof envelope.checkout_url === 'string' ||
-    typeof envelope.payment_url === 'string' ||
-    typeof envelope.authorization_url === 'string' ||
-    (typeof envelope.url === 'string' && /^https?:\/\//i.test(envelope.url))
+    typeof envelope.checkout_url === "string" ||
+    typeof envelope.payment_url === "string" ||
+    typeof envelope.authorization_url === "string" ||
+    (typeof envelope.url === "string" && /^https?:\/\//i.test(envelope.url));
 
   if (
     location &&
     envelope.redirect_url === undefined &&
     !hasCheckout &&
-    typeof envelope.paymentUrl !== 'string' &&
-    typeof envelope.checkoutUrl !== 'string'
+    typeof envelope.paymentUrl !== "string" &&
+    typeof envelope.checkoutUrl !== "string"
   ) {
-    envelope.redirect_url = location
+    envelope.redirect_url = location;
   }
 
-  return Response.json(envelope, { status: res.status })
+  return Response.json(envelope, { status: res.status });
 }
 
 /**
  * Proxies `PATCH ${NEXT_API_URL}{pathname}` with the incoming JSON body.
  * `pathname` must start with `/api/v1`.
  */
-export async function proxyV1PatchJson(request: Request, pathname: string): Promise<Response> {
-  const base = getApiBaseUrl()
+export async function proxyV1PatchJson(
+  request: Request,
+  pathname: string,
+): Promise<Response> {
+  const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: 'Server is not configured (NEXT_API_URL).' },
+      { error: "Server is not configured (NEXT_API_URL)." },
       { status: 503 },
-    )
+    );
   }
 
-  const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization')
+  const authHeader =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
   if (!authHeader) {
-    return Response.json({ error: 'Authentication required.' }, { status: 401 })
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
   }
 
-  const bodyText = await request.text()
+  const bodyText = await request.text();
   const contentType =
-    request.headers.get('content-type')?.trim() || 'application/json'
-  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
-  const url = `${base}${path}`
+    request.headers.get("content-type")?.trim() || "application/json";
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${base}${path}`;
 
-  let res: Response
+  let res: Response;
   try {
     res = await fetch(url, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: {
-        Accept: 'application/json',
-        'Content-Type': contentType,
+        Accept: "application/json",
+        "Content-Type": contentType,
         Authorization: authHeader,
       },
       body: bodyText.length > 0 ? bodyText : undefined,
-      cache: 'no-store',
-    })
+      cache: "no-store",
+    });
   } catch {
     return Response.json(
-      { error: 'Could not reach the API. Check your connection.' },
+      { error: "Could not reach the API. Check your connection." },
       { status: 502 },
-    )
+    );
   }
 
-  const rawText = await res.text().catch(() => '')
-  let data: unknown
+  const rawText = await res.text().catch(() => "");
+  let data: unknown;
   if (rawText.trim()) {
     try {
-      data = JSON.parse(rawText) as unknown
+      data = JSON.parse(rawText) as unknown;
     } catch {
-      data = { raw: rawText }
+      data = { raw: rawText };
     }
   } else {
-    data = {}
+    data = {};
   }
 
   if (!res.ok) {
     return Response.json(
       {
         error: formatUpstreamJsonError(
-          typeof data === 'object' && data !== null ? data : { detail: String(data) },
+          typeof data === "object" && data !== null
+            ? data
+            : { detail: String(data) },
         ),
       },
       { status: res.status },
-    )
+    );
   }
 
   return Response.json(
-    typeof data === 'object' && data !== null && !Array.isArray(data) ? data : { payload: data },
+    typeof data === "object" && data !== null && !Array.isArray(data)
+      ? data
+      : { payload: data },
     { status: res.status },
-  )
+  );
 }
 
 /**
  * Proxies `DELETE ${NEXT_API_URL}{pathname}`. Optionally forwards JSON body if present.
  * `pathname` must start with `/api/v1`.
  */
-export async function proxyV1Delete(request: Request, pathname: string): Promise<Response> {
-  const base = getApiBaseUrl()
+export async function proxyV1Delete(
+  request: Request,
+  pathname: string,
+): Promise<Response> {
+  const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: 'Server is not configured (NEXT_API_URL).' },
+      { error: "Server is not configured (NEXT_API_URL)." },
       { status: 503 },
-    )
+    );
   }
 
-  const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization')
+  const authHeader =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
   if (!authHeader) {
-    return Response.json({ error: 'Authentication required.' }, { status: 401 })
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
   }
 
-  const bodyText = await request.text()
-  const hasBody = bodyText.length > 0
-  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
-  const url = `${base}${path}`
+  const bodyText = await request.text();
+  const hasBody = bodyText.length > 0;
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${base}${path}`;
 
   const headers: HeadersInit = {
-    Accept: 'application/json',
+    Accept: "application/json",
     Authorization: authHeader,
-  }
+  };
   if (hasBody) {
     const contentType =
-      request.headers.get('content-type')?.trim() || 'application/json'
-    ;(headers as Record<string, string>)['Content-Type'] = contentType
+      request.headers.get("content-type")?.trim() || "application/json";
+    (headers as Record<string, string>)["Content-Type"] = contentType;
   }
 
-  let res: Response
+  let res: Response;
   try {
     res = await fetch(url, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
       body: hasBody ? bodyText : undefined,
-      cache: 'no-store',
-    })
+      cache: "no-store",
+    });
   } catch {
     return Response.json(
-      { error: 'Could not reach the API. Check your connection.' },
+      { error: "Could not reach the API. Check your connection." },
       { status: 502 },
-    )
+    );
   }
 
-  const rawText = await res.text().catch(() => '')
-  let data: unknown
+  const rawText = await res.text().catch(() => "");
+  let data: unknown;
   if (rawText.trim()) {
     try {
-      data = JSON.parse(rawText) as unknown
+      data = JSON.parse(rawText) as unknown;
     } catch {
-      data = { raw: rawText }
+      data = { raw: rawText };
     }
   } else {
-    data = {}
+    data = {};
   }
 
   if (!res.ok) {
     return Response.json(
       {
         error: formatUpstreamJsonError(
-          typeof data === 'object' && data !== null ? data : { detail: String(data) },
+          typeof data === "object" && data !== null
+            ? data
+            : { detail: String(data) },
         ),
       },
       { status: res.status },
-    )
+    );
   }
 
   return Response.json(
-    typeof data === 'object' && data !== null && !Array.isArray(data) ? data : { payload: data },
+    typeof data === "object" && data !== null && !Array.isArray(data)
+      ? data
+      : { payload: data },
     { status: res.status },
-  )
+  );
 }
 
 /**
@@ -328,73 +378,82 @@ export async function proxyV1PostMultipart(
   request: Request,
   pathname: string,
 ): Promise<Response> {
-  const base = getApiBaseUrl()
+  const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: 'Server is not configured (NEXT_API_URL).' },
+      { error: "Server is not configured (NEXT_API_URL)." },
       { status: 503 },
-    )
+    );
   }
 
-  const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization')
+  const authHeader =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
   if (!authHeader) {
-    return Response.json({ error: 'Authentication required.' }, { status: 401 })
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
   }
 
-  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
-  const url = `${base}${path}`
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${base}${path}`;
 
-  let formData: FormData
+  let formData: FormData;
   try {
-    formData = await request.formData()
+    formData = await request.formData();
   } catch {
-    return Response.json({ error: 'Invalid multipart body.' }, { status: 400 })
+    return Response.json({ error: "Invalid multipart body." }, { status: 400 });
   }
 
-  let res: Response
+  let res: Response;
   try {
     res = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
         Authorization: authHeader,
       },
       body: formData,
-      cache: 'no-store',
-    })
+      cache: "no-store",
+    });
   } catch {
     return Response.json(
-      { error: 'Could not reach the API. Check your connection.' },
+      { error: "Could not reach the API. Check your connection." },
       { status: 502 },
-    )
+    );
   }
 
-  const rawText = await res.text().catch(() => '')
+  const rawText = await res.text().catch(() => "");
 
-  let data: unknown
+  let data: unknown;
   if (rawText.trim()) {
     try {
-      data = JSON.parse(rawText) as unknown
+      data = JSON.parse(rawText) as unknown;
     } catch {
-      data = { raw: rawText }
+      data = { raw: rawText };
     }
   } else {
-    data = {}
+    data = {};
   }
 
   if (!res.ok) {
     return Response.json(
       {
         error: formatUpstreamJsonError(
-          typeof data === 'object' && data !== null ? data : { detail: String(data) },
+          typeof data === "object" && data !== null
+            ? data
+            : { detail: String(data) },
         ),
       },
       { status: res.status },
-    )
+    );
   }
 
   return Response.json(
-    typeof data === 'object' && data !== null && !Array.isArray(data) ? data : { payload: data },
+    typeof data === "object" && data !== null && !Array.isArray(data)
+      ? data
+      : { payload: data },
     { status: res.status },
-  )
+  );
 }
