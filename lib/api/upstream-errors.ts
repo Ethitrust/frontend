@@ -24,6 +24,14 @@ export function formatUpstreamJsonError(body: unknown): string {
     if (typeof d === 'string' && d.length > 0) {
       return d
     }
+    if (d !== null && typeof d === 'object') {
+      try {
+        const s = JSON.stringify(d)
+        if (s.length > 0) return s.length > 600 ? `${s.slice(0, 600)}…` : s
+      } catch {
+        return 'Request failed (unreadable error detail)'
+      }
+    }
   }
   if (typeof o.message === 'string' && o.message.length > 0) {
     return o.message

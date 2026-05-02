@@ -58,7 +58,15 @@ export async function proxyV1GetJson(
   }
 
   if (!res.ok) {
-    return Response.json({ error: formatUpstreamJsonError(data) }, { status: res.status })
+    const message = formatUpstreamJsonError(data)
+    if (process.env.NODE_ENV === 'development' && res.status >= 500) {
+      console.error('[proxyV1GetJson] upstream GET failed', { url, status: res.status, body: data })
+      return Response.json(
+        { error: message, upstream: data },
+        { status: res.status },
+      )
+    }
+    return Response.json({ error: message }, { status: res.status })
   }
 
   return Response.json(data, { status: res.status })

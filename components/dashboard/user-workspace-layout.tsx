@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { MenuIcon, UserIcon } from 'lucide-react'
 
+import { AdminSidebarNav } from '@/components/admin/admin-sidebar-nav'
 import { WorkspaceSidebarLogout } from '@/components/dashboard/workspace-sidebar-logout'
 import { UserNotificationsNavPopover } from '@/components/notifications/user-notifications-nav-popover'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -23,8 +24,17 @@ import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
-function NavBody({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname()
+/** Chooses workspace vs operator navigation from the URL. */
+function WorkspaceSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname() ?? ''
+  if (pathname.startsWith('/admin')) {
+    return <AdminSidebarNav onNavigate={onNavigate} />
+  }
+  return <UserWorkspaceNavBody onNavigate={onNavigate} />
+}
+
+function UserWorkspaceNavBody({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname() ?? ''
   const { typography } = ethitrustThemeTokens
   const accessToken = useAuthStore((s) => s.accessToken)
 
@@ -75,7 +85,12 @@ function NavBody({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function UserWorkspaceLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() ?? ''
+  const adminMode = pathname.startsWith('/admin')
   const { layout, typography, brand, surfaces, controls } = ethitrustThemeTokens
+
+  const brandHref = adminMode ? '/admin' : '/dashboard'
+  const sidebarLabel = adminMode ? 'Admin workspace sidebar' : 'Workspace sidebar'
 
   return (
     <div className={cn(layout.page, 'grain flex min-h-screen flex-col')}>
@@ -92,11 +107,18 @@ export function UserWorkspaceLayout({ children }: { children: React.ReactNode })
               className="flex h-full max-h-[100dvh] w-72 flex-col gap-0 overflow-hidden pt-10"
             >
               <SheetHeader>
-                <SheetTitle className="text-left font-serif text-lg">{brand.name}</SheetTitle>
+                <SheetTitle className="text-left font-serif text-lg">
+                  <span>{brand.name}</span>
+                  {adminMode ? (
+                    <span className="mt-0.5 block text-xs font-normal normal-case tracking-normal text-muted-foreground">
+                      Operator console
+                    </span>
+                  ) : null}
+                </SheetTitle>
               </SheetHeader>
               <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-1">
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                  <NavBody />
+                  <WorkspaceSidebarNav />
                 </div>
                 <div className="shrink-0 border-t border-border pt-4">
                   <WorkspaceSidebarLogout />
@@ -105,7 +127,7 @@ export function UserWorkspaceLayout({ children }: { children: React.ReactNode })
             </SheetContent>
           </Sheet>
 
-          <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
+          <Link href={brandHref} className="flex min-w-0 items-center gap-2">
             <span className={controls.brandMark}>
               <svg
                 viewBox="0 0 24 24"
@@ -146,11 +168,11 @@ export function UserWorkspaceLayout({ children }: { children: React.ReactNode })
       <div className="flex flex-1">
         <aside
           className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[15.5rem] shrink-0 flex-col border-r border-border bg-card/35 backdrop-blur-md md:flex lg:w-64"
-          aria-label="Workspace sidebar"
+          aria-label={sidebarLabel}
         >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="min-h-0 flex-1 overflow-y-auto py-6 pl-4 pr-3 lg:pl-6">
-              <NavBody />
+              <WorkspaceSidebarNav />
             </div>
             <div className="shrink-0 border-t border-border px-4 py-4 lg:px-6">
               <WorkspaceSidebarLogout />

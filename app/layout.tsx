@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppToaster } from '@/components/app-toaster'
+import { SessionRoleGate } from '@/components/auth/session-role-gate'
 import { EthitrustThemeProvider } from '@/components/ethitrust-theme-provider'
 import { QueryProvider } from '@/components/query-provider'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -69,7 +70,7 @@ export default function RootLayout({
         >
           <EthitrustThemeProvider>
             <QueryProvider>
-              {children}
+              <SessionRoleGate>{children}</SessionRoleGate>
               <AppToaster />
             </QueryProvider>
           </EthitrustThemeProvider>

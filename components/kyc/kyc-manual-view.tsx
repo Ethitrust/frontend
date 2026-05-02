@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -33,9 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { ComplianceFlowShell } from '@/components/kyc/compliance-flow-shell'
 import { KycSessionGate } from '@/components/kyc/kyc-session-gate'
+import { postManualKycSubmission } from '@/lib/kyc/me-kyc-api'
 import {
   assertManualFiles,
   kycManualSchema,
@@ -61,35 +61,56 @@ export function KycManualView() {
   )
 }
 
-function KycManualSignedIn({ accessToken: _accessToken }: { accessToken: string }) {
+function KycManualSignedIn({ accessToken }: { accessToken: string }) {
+  const qc = useQueryClient()
   const [front, setFront] = useState<File | null>(null)
   const [back, setBack] = useState<File | null>(null)
   const [selfie, setSelfie] = useState<File | null>(null)
 
   const form = useForm<KycManualFormValues>({
-    resolver: zodResolver(kycManualSchema),
+    resolver: zodResolver(kycManualSchema),    
     defaultValues: {
       holderName: '',
       idType: 'national_id',
       idNumber: '',
-      notes: '',
+    },
+  })
+
+  const submitMutation = useMutation({
+    mutationFn: async (values: KycManualFormValues) => {
+      const fileError = assertManualFiles({ front, back, selfie })
+      if (fileError) throw new Error(fileError)
+
+      const fd = new FormData()
+      fd.set('full_name', values.holderName.trim())
+      fd.set('id_number', values.idNumber.trim())
+      fd.set('id_type', values.idType)
+
+      fd.set('front_id_file', front!, front!.name)
+      if (back) fd.set('back_id_file', back, back.name)
+      if (selfie) fd.set('selfie_file', selfie, selfie.name)
+
+      return postManualKycSubmission(accessToken, fd)
+    },
+    onSuccess: () => {
+      toast.success('Documents submitted', {
+        description: 'Your packet was uploaded for manual review. We will refresh your profile status.',
+      })
+      void qc.invalidateQueries({ queryKey: ['me', 'auth', 'profile'] })
+      form.reset({ holderName: '', idType: 'national_id', idNumber: '' })
+      setFront(null)
+      setBack(null)
+      setSelfie(null)
+    },
+    onError: (err) => {
+      toast.error('Submission failed', {
+        description: err instanceof Error ? err.message : 'Request failed.',
+      })
     },
   })
 
   function onSubmit(values: KycManualFormValues) {
-    const fileError = assertManualFiles({ front, back, selfie })
-    if (fileError) {
-      toast.error(fileError)
-      return
-    }
-    toast.message('Packet prepared locally', {
-      description:
-        'Document upload routes are not in the published reference yet, so nothing was uploaded. This page is ready to connect when your team exposes them.',
-    })
-    form.reset({ holderName: '', idType: 'national_id', idNumber: '', notes: '' })
-    setFront(null)
-    setBack(null)
-    setSelfie(null)
+    submitMutation.mutate(values)
   }
 
   return (
@@ -98,14 +119,6 @@ function KycManualSignedIn({ accessToken: _accessToken }: { accessToken: string 
       description="Upload sharp, well-lit photos of your ID and a portrait. Review teams use them when digital verification is not possible."
       contentClassName="max-w-3xl"
     >
-      <Alert className="mb-8 border-sky-200 bg-sky-50/80 text-sky-950 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
-        <AlertTitle>Preview mode</AlertTitle>
-        <AlertDescription>
-          Document upload and review queues are not described in the current API reference. Rehearse the flow here;
-          files stay in your browser until a service is connected.
-        </AlertDescription>
-      </Alert>
-
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Document packet</CardTitle>
@@ -185,7 +198,7 @@ function KycManualSignedIn({ accessToken: _accessToken }: { accessToken: string 
                     {fileLabel('Front', front)}
                   </FormItem>
                   <FormItem>
-                    <FormLabel>Back</FormLabel>
+                    <FormLabel>Back (optional)</FormLabel>
                     <FormControl>
                       <Input
                         accept="image/jpeg,image/png,image/webp"
@@ -197,8 +210,8 @@ function KycManualSignedIn({ accessToken: _accessToken }: { accessToken: string 
                     {fileLabel('Back', back)}
                   </FormItem>
                   <FormItem>
-                    <FormLabel>Selfie with ID</FormLabel>
-                    <FormDescription className="text-xs">Portrait beside the document edge if policy requires.</FormDescription>
+                    <FormLabel>Selfie (optional)</FormLabel>
+                    <FormDescription className="text-xs">Add a live photo if you want to strengthen the submission.</FormDescription>
                     <FormControl>
                       <Input
                         accept="image/jpeg,image/png,image/webp"
@@ -212,34 +225,17 @@ function KycManualSignedIn({ accessToken: _accessToken }: { accessToken: string 
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes for reviewers (optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Explain name changes, document renewals, or extra context."
-                        className="min-h-[96px] rounded-lg"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="flex flex-wrap gap-3">
-                <Button type="submit" className="rounded-full">
-                  Submit for review (preview)
+                <Button type="submit" className="rounded-full" disabled={submitMutation.isPending}>
+                  {submitMutation.isPending ? 'Uploading…' : 'Submit for review'}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   className="rounded-full"
+                  disabled={submitMutation.isPending}
                   onClick={() => {
-                    form.reset({ holderName: '', idType: 'national_id', idNumber: '', notes: '' })
+                    form.reset({ holderName: '', idType: 'national_id', idNumber: '' })
                     setFront(null)
                     setBack(null)
                     setSelfie(null)
