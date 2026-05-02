@@ -31,6 +31,9 @@ import {
   postAdminDisputeAssignMediator,
   postAdminDisputeEvidenceTamper,
   postAdminDisputeResolutionNote,
+  fetchAdminDisputeForensics,
+  postAdminDisputeAnalyzeChat,
+  postAdminEvidenceRerunEla,
 } from '@/lib/admin/admin-platform-api'
 import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
 import { cn } from '@/lib/utils'
@@ -51,6 +54,12 @@ export function AdminDisputeConsoleView({
     enabled: Boolean(accessToken && disputeId),
   })
 
+  const forensicsQuery = useQuery({
+    queryKey: ['admin', 'disputes', disputeId, 'forensics'],
+    queryFn: () => fetchAdminDisputeForensics(accessToken, disputeId),
+    enabled: Boolean(accessToken && disputeId),
+  })
+
   const [mediatorId, setMediatorId] = useState('')
   const [resolutionNote, setResolutionNote] = useState('')
   const [disputeAction, setDisputeAction] = useState('escalate')
@@ -61,6 +70,10 @@ export function AdminDisputeConsoleView({
 
   const invalidateThread = () => {
     void qc.invalidateQueries({ queryKey: ['admin', 'disputes', disputeId, 'thread'] })
+  }
+
+  const invalidateForensics = () => {
+    void qc.invalidateQueries({ queryKey: ['admin', 'disputes', disputeId, 'forensics'] })
   }
 
   const mediatorMutation = useMutation({
@@ -120,6 +133,24 @@ export function AdminDisputeConsoleView({
     onSuccess: () => {
       toast.success('Evidence tamper flag recorded')
       invalidateThread()
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const analyzeChatMutation = useMutation({
+    mutationFn: () => postAdminDisputeAnalyzeChat(accessToken, disputeId),
+    onSuccess: () => {
+      toast.success('Chat analysis complete')
+      invalidateThread()
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const rerunElaMutation = useMutation({
+    mutationFn: () => postAdminEvidenceRerunEla(accessToken, evidenceId.trim()),
+    onSuccess: () => {
+      toast.success('ELA analysis queued')
+      invalidateForensics()
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -261,20 +292,65 @@ export function AdminDisputeConsoleView({
             <Label htmlFor="ev-meta">Metadata JSON</Label>
             <Textarea id="ev-meta" rows={3} value={evidenceMetaJson} onChange={(ev) => setEvidenceMetaJson(ev.target.value)} />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!evidenceId.trim() || tamperMutation.isPending}
-            onClick={() => tamperMutation.mutate()}
-          >
-            Submit evidence update
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!evidenceId.trim() || tamperMutation.isPending}
+              onClick={() => tamperMutation.mutate()}
+            >
+              Submit evidence update
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!evidenceId.trim() || rerunElaMutation.isPending}
+              onClick={() => rerunElaMutation.mutate()}
+            >
+              Re-run ELA Forensics
+            </Button>
+          </div>
           <Alert>
             <AlertTitle>Thread parsing</AlertTitle>
             <AlertDescription className="text-xs">
               Auto-extraction of evidence identifiers from unstructured thread payloads may arrive in a future iteration.
             </AlertDescription>
           </Alert>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm border-blue-200 bg-blue-50/30">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold text-blue-900">Digital Receipt Forensics (ELA)</CardTitle>
+          <CardDescription className="text-blue-700/80">
+            Error Level Analysis detects inconsistencies in pixel density that occur when scammers alter numbers or dates on payment screenshots.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminJsonInspect 
+            data={forensicsQuery.data} 
+            isPending={forensicsQuery.isPending} 
+            errorMessage={forensicsQuery.isError && forensicsQuery.error instanceof Error ? forensicsQuery.error.message : null} 
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm border-purple-200 bg-purple-50/30">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold text-purple-900">Conversational Intent Classifier</CardTitle>
+          <CardDescription className="text-purple-700/80">
+            Uses Gemini NLP to analyze transaction chat logs for linguistic markers indicating &quot;Artificial Urgency&quot; or &quot;Platform Circumvention&quot;.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            type="button"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+            disabled={analyzeChatMutation.isPending}
+            onClick={() => analyzeChatMutation.mutate()}
+          >
+            {analyzeChatMutation.isPending ? 'Analyzing...' : 'Run Chat Analysis'}
+          </Button>
         </CardContent>
       </Card>
     </div>

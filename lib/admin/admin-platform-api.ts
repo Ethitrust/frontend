@@ -274,3 +274,27 @@ export async function postAdminDisputeEvidenceTamper(
   const id = encodeURIComponent(evidenceId)
   return adminPostJson(accessToken, `/api/me/admin/disputes/evidence/${id}/tamper`, body)
 }
+
+export async function fetchAdminDisputeForensics(
+  accessToken: string,
+  disputeId: string,
+): Promise<unknown> {
+  const id = encodeURIComponent(disputeId)
+  return adminGetJson(accessToken, `/api/me/admin/disputes/${id}/forensics`)
+}
+
+export async function postAdminDisputeAnalyzeChat(
+  accessToken: string,
+  disputeId: string,
+): Promise<unknown> {
+  const id = encodeURIComponent(disputeId)
+  return adminPostJson(accessToken, `/api/me/admin/disputes/${id}/analyze-chat`, {})
+}
+
+export async function postAdminEvidenceRerunEla(
+  accessToken: string,
+  evidenceId: string,
+): Promise<unknown> {
+  const id = encodeURIComponent(evidenceId)
+  return adminPostJson(accessToken, `/api/me/admin/disputes/evidence/${id}/rerun-ela`, {})
+}
