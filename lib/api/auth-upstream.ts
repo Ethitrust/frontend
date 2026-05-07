@@ -50,6 +50,10 @@ export function getApiBaseUrl(): string | null {
   return raw.replace(/\/+$/, "");
 }
 
+/** Shared copy for 503 when neither public nor internal API base is configured. */
+export const MISSING_API_BASE_ERROR =
+  "Server is not configured (set NEXT_API_URL or NEXT_API_INTERNAL_URL).";
+
 type AuthSegment =
   | "register"
   | "login"
@@ -63,10 +67,7 @@ export async function postAuthUpstream(
 ): Promise<Response> {
   const base = getApiBaseUrl();
   if (!base) {
-    return Response.json(
-      { error: "Server is not configured (NEXT_API_URL)." },
-      { status: 503 },
-    );
+    return Response.json({ error: MISSING_API_BASE_ERROR }, { status: 503 });
   }
 
   const headers: Record<string, string> = {
