@@ -1,4 +1,7 @@
-import { getApiBaseUrl } from "@/lib/api/auth-upstream";
+import {
+  getApiBaseUrl,
+  MISSING_API_BASE_ERROR,
+} from "@/lib/api/auth-upstream";
 import { formatUpstreamJsonError } from "@/lib/api/upstream-errors";
 
 /**
@@ -13,7 +16,7 @@ export async function proxyV1GetJson(
   const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: "Server is not configured (NEXT_API_URL)." },
+      { error: MISSING_API_BASE_ERROR },
       { status: 503 },
     );
   }
@@ -98,7 +101,7 @@ export async function proxyV1PostJson(
   const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: "Server is not configured (NEXT_API_URL)." },
+      { error: MISSING_API_BASE_ERROR },
       { status: 503 },
     );
   }
@@ -208,7 +211,7 @@ export async function proxyV1PatchJson(
   const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: "Server is not configured (NEXT_API_URL)." },
+      { error: MISSING_API_BASE_ERROR },
       { status: 503 },
     );
   }
@@ -292,7 +295,7 @@ export async function proxyV1Delete(
   const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: "Server is not configured (NEXT_API_URL)." },
+      { error: MISSING_API_BASE_ERROR },
       { status: 503 },
     );
   }
@@ -381,7 +384,7 @@ export async function proxyV1PostMultipart(
   const base = getApiBaseUrl();
   if (!base) {
     return Response.json(
-      { error: "Server is not configured (NEXT_API_URL)." },
+      { error: MISSING_API_BASE_ERROR },
       { status: 503 },
     );
   }
