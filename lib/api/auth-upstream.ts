@@ -33,6 +33,21 @@ function buildForwardedClientHeaders(
   return h;
 }
 
+/** Best-effort errno / Undici cause chain for fetch() failures (connection refused, DNS, etc.). */
+function networkErrnoFromUnknown(err: unknown): string | undefined {
+  let cur: unknown = err;
+  const seen = new Set<unknown>();
+  while (cur && typeof cur === "object" && !seen.has(cur)) {
+    seen.add(cur);
+    const o = cur as NodeJS.ErrnoException & { cause?: unknown };
+    if (typeof o.code === "string" && o.code.length > 0) {
+      return o.code;
+    }
+    cur = o.cause;
+  }
+  return undefined;
+}
+
 /**
  * Base URL for Route Handlers → Ethitrust API (server-side only).
  * Prefer `NEXT_API_INTERNAL_URL` so Node `fetch()` does not hit Cloudflare on the
@@ -84,9 +99,19 @@ export async function postAuthUpstream(
       headers,
       body: JSON.stringify(body),
     });
-  } catch {
+  } catch (err) {
+    const errno = networkErrnoFromUnknown(err);
+    console.error("[postAuthUpstream] upstream fetch failed", {
+      segment,
+      base,
+      errno,
+      message: err instanceof Error ? err.message : String(err),
+    });
     return Response.json(
-      { error: "Could not reach the API. Check your connection." },
+      {
+        error: "Could not reach the API. Check your connection.",
+        ...(errno ? { errno } : {}),
+      },
       { status: 502 },
     );
   }
