@@ -2,6 +2,35 @@ import { formatUpstreamJsonError } from './upstream-errors'
 
 const AUTH_PREFIX = '/api/v1/auth'
 
+/**
+ * Cloudflare (and similar) often challenge server-side fetch() with default Node UA.
+ * Use a stable browser-like UA for outbound auth calls only.
+ */
+const UPSTREAM_AUTH_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Ethitrust-BFF/1'
+
+const INCOMING_HEADER_ALLOWLIST = [
+  'x-forwarded-for',
+  'x-forwarded-proto',
+  'x-forwarded-host',
+  'x-real-ip',
+  'cf-connecting-ip',
+  'cf-ray',
+  'true-client-ip',
+  'forwarded',
+  'origin',
+  'referer',
+] as const
+
+function buildForwardedClientHeaders(incoming: Request): Record<string, string> {
+  const h: Record<string, string> = {}
+  for (const name of INCOMING_HEADER_ALLOWLIST) {
+    const v = incoming.headers.get(name)
+    if (v) h[name] = v
+  }
+  return h
+}
+
 export function getApiBaseUrl(): string | null {
   const raw = process.env.NEXT_API_URL?.trim()
   if (!raw) {
@@ -15,6 +44,7 @@ type AuthSegment = 'register' | 'login' | 'verify-email' | 'resend-verification'
 export async function postAuthUpstream(
   segment: AuthSegment,
   body: unknown,
+  incoming?: Request,
 ): Promise<Response> {
   const base = getApiBaseUrl()
   if (!base) {
@@ -24,14 +54,18 @@ export async function postAuthUpstream(
     )
   }
 
+  const headers: Record<string, string> = {
+    ...(incoming ? buildForwardedClientHeaders(incoming) : {}),
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'User-Agent': UPSTREAM_AUTH_USER_AGENT,
+  }
+
   let res: Response
   try {
     res = await fetch(`${base}${AUTH_PREFIX}/${segment}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     })
   } catch {

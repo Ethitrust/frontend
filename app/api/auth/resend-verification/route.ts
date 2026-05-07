@@ -18,5 +18,5 @@ export async function POST(request: Request) {
     )
   }
 
-  return postAuthUpstream('resend-verification', parsed.data)
+  return postAuthUpstream('resend-verification', parsed.data, request)
 }

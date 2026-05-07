@@ -18,5 +18,5 @@ export async function POST(request: Request) {
     )
   }
 
-  return postAuthUpstream('verify-email', parsed.data)
+  return postAuthUpstream('verify-email', parsed.data, request)
 }

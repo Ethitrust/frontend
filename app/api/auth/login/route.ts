@@ -21,5 +21,5 @@ export async function POST(request: Request) {
     )
   }
 
-  return postAuthUpstream('login', parsed.data)
+  return postAuthUpstream('login', parsed.data, request)
 }

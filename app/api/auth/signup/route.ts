@@ -21,5 +21,5 @@ export async function POST(request: Request) {
     )
   }
 
-  return postAuthUpstream('register', parsed.data)
+  return postAuthUpstream('register', parsed.data, request)
 }
