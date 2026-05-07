@@ -19,13 +19,29 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
 
           script: |
-            cd /var/www/ethitrust
+            set -e
+            BASE=/var/www/ethitrust
+            cd "$BASE"
 
+            if [ -f "$BASE/frontend/package.json" ]; then
+              GIT_ROOT="$BASE"
+              APP_DIR="$BASE/frontend"
+            else
+              GIT_ROOT="$BASE"
+              APP_DIR="$BASE"
+            fi
+
+            cd "$GIT_ROOT"
             git pull origin main
 
+            cd "$APP_DIR"
             npm install
-
             npm run build
 
+            if [ ! -f .next/standalone/server.js ]; then
+              echo "next build did not emit .next/standalone/server.js (check build logs / memory)."
+              exit 1
+            fi
+
             # Ensure PM2 uses ecosystem.config.cjs (cwd = .next/standalone)
-            pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
+            pm2 reload "$APP_DIR/ecosystem.config.cjs" --update-env || pm2 start "$APP_DIR/ecosystem.config.cjs"
