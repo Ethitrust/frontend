@@ -1,53 +1,55 @@
-'use client'
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useFieldArray, useForm, type Resolver } from 'react-hook-form'
-import { PlusCircle, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useFieldArray, useForm, type Resolver } from "react-hook-form";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   createEscrowFormSchema,
   type CreateEscrowFormInput,
   type CreateEscrowFormValues,
-} from '@/lib/validators/create-escrow'
-import { postInitializeEscrow } from '@/lib/escrows/me-escrows-api'
-import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
-import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth-store'
+} from "@/lib/validators/create-escrow";
+import { postInitializeEscrow } from "@/lib/escrows/me-escrows-api";
+import { ethitrustThemeTokens } from "@/lib/ethitrust-theme";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 
 function toIsoOrThrow(local: string, label: string) {
-  const t = Date.parse(local)
-  if (Number.isNaN(t)) throw new Error(`${label} is not a valid date`)
-  return new Date(t).toISOString()
+  const t = Date.parse(local);
+  if (Number.isNaN(t)) throw new Error(`${label} is not a valid date`);
+  return new Date(t).toISOString();
 }
 
 function buildApiPayload(values: CreateEscrowFormValues) {
@@ -61,65 +63,72 @@ function buildApiPayload(values: CreateEscrowFormValues) {
     amount: values.amount,
     acceptance_criteria: values.acceptance_criteria.trim(),
     inspection_period: values.inspection_period,
-    delivery_date: toIsoOrThrow(values.delivery_date, 'Delivery target'),
+    delivery_date: toIsoOrThrow(values.delivery_date, "Delivery target"),
     dispute_window: values.dispute_window,
     who_pays_fees: values.who_pays_fees,
-  }
-  if (values.escrow_type !== 'milestone') return base
+  };
+  if (values.escrow_type !== "milestone") return base;
   return {
     ...base,
     milestones: values.milestones.map((m) => ({
       title: m.title.trim(),
       description: m.description.trim(),
       amount: m.amount,
-      due_date: toIsoOrThrow(m.due_date, `Milestone “${m.title.trim() || 'Untitled'}” due date`),
+      due_date: toIsoOrThrow(
+        m.due_date,
+        `Milestone “${m.title.trim() || "Untitled"}” due date`,
+      ),
       inspection_hrs: m.inspection_hrs,
     })),
-  }
+  };
 }
 
 const defaultValues: CreateEscrowFormInput = {
-  invitee_email: '',
-  escrow_type: 'onetime',
-  initiator_role: 'buyer',
-  title: '',
-  description: '',
-  currency: 'ETB',
+  invitee_email: "",
+  escrow_type: "onetime",
+  initiator_role: "buyer",
+  title: "",
+  description: "",
+  currency: "ETB",
   amount: undefined,
-  acceptance_criteria: '',
+  acceptance_criteria: "",
   inspection_period: 48,
-  delivery_date: '',
+  delivery_date: "",
   dispute_window: 72,
-  who_pays_fees: 'buyer',
+  who_pays_fees: "buyer",
   milestones: [],
-}
+};
 
-const defaultMilestone = (): NonNullable<CreateEscrowFormInput['milestones']>[number] => ({
-  title: '',
-  description: '',
+const defaultMilestone = (): NonNullable<
+  CreateEscrowFormInput["milestones"]
+>[number] => ({
+  title: "",
+  description: "",
   amount: undefined,
-  due_date: '',
+  due_date: "",
   inspection_hrs: 48,
-})
+});
 
 export function CreateEscrowForm({ className }: { className?: string }) {
-  const router = useRouter()
-  const e = ethitrustThemeTokens
-  const accessToken = useAuthStore((s) => s.accessToken)
+  const router = useRouter();
+  const e = ethitrustThemeTokens;
+  const accessToken = useAuthStore((s) => s.accessToken);
 
   const initMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const token = useAuthStore.getState().accessToken
-      if (!token) throw new Error('Sign in to create an escrow')
-      return postInitializeEscrow(token, payload)
+      const token = useAuthStore.getState().accessToken;
+      if (!token) throw new Error("Sign in to create an escrow");
+      return postInitializeEscrow(token, payload);
     },
     onSuccess: (row) => {
-      toast.success('Escrow created', { description: row.title })
-      router.push(`/escrows/${encodeURIComponent(row.id)}`)
+      toast.success("Escrow created", { description: row.title });
+      router.push(`/escrows/${encodeURIComponent(row.id)}`);
     },
     onError: (err: unknown) =>
-      toast.error(err instanceof Error ? err.message : 'Could not create escrow'),
-  })
+      toast.error(
+        err instanceof Error ? err.message : "Could not create escrow",
+      ),
+  });
 
   const form = useForm<CreateEscrowFormInput, unknown, CreateEscrowFormValues>({
     resolver: zodResolver(createEscrowFormSchema) as Resolver<
@@ -128,37 +137,39 @@ export function CreateEscrowForm({ className }: { className?: string }) {
       CreateEscrowFormValues
     >,
     defaultValues,
-  })
+  });
 
-  const escrowType = form.watch('escrow_type')
+  const escrowType = form.watch("escrow_type");
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
-    name: 'milestones',
-  })
+    name: "milestones",
+  });
 
   function onSubmit(values: CreateEscrowFormValues) {
     if (!accessToken) {
-      toast.error('Sign in to create an escrow')
-      return
+      toast.error("Sign in to create an escrow");
+      return;
     }
-    let payload: Record<string, unknown>
+    let payload: Record<string, unknown>;
     try {
-      payload = buildApiPayload(values) as Record<string, unknown>
+      payload = buildApiPayload(values) as Record<string, unknown>;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Check your dates')
-      return
+      toast.error(err instanceof Error ? err.message : "Check your dates");
+      return;
     }
-    initMutation.mutate(payload)
+    initMutation.mutate(payload);
   }
 
   if (!accessToken) {
     return (
-      <Card className={cn('max-w-3xl shadow-sm', className)}>
+      <Card className={cn("max-w-3xl shadow-sm", className)}>
         <CardHeader className="border-b">
-          <CardTitle className="text-lg font-semibold">Sign in required</CardTitle>
+          <CardTitle className="text-lg font-semibold">
+            Sign in required
+          </CardTitle>
           <CardDescription>
-            Creating an escrow uses your authenticated session. Sign in first, then you can invite a counterparty
-            and define terms.
+            Creating an escrow uses your authenticated session. Sign in first,
+            then you can invite a counterparty and define terms.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -167,16 +178,16 @@ export function CreateEscrowForm({ className }: { className?: string }) {
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
-    <Card className={cn('max-w-3xl shadow-sm', className)}>
+    <Card className={cn("max-w-3xl shadow-sm", className)}>
       <CardHeader className="border-b">
         <CardTitle className="text-lg font-semibold">Escrow details</CardTitle>
         <CardDescription>
-          Define the counterparty, economics, and acceptance rules. Milestone schedules apply when you choose
-          a milestone escrow.
+          Define the counterparty, economics, and acceptance rules. Milestone
+          schedules apply when you choose a milestone escrow.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -189,7 +200,12 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                 <FormItem>
                   <FormLabel>Invitee email</FormLabel>
                   <FormControl>
-                    <Input type="email" autoComplete="off" placeholder="counterparty@company.com" {...field} />
+                    <Input
+                      type="email"
+                      autoComplete="off"
+                      placeholder="counterparty@company.com"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -206,12 +222,12 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                     <Select
                       value={field.value}
                       onValueChange={(v) => {
-                        field.onChange(v)
-                        if (v === 'milestone' && fields.length === 0) {
-                          append(defaultMilestone())
+                        field.onChange(v);
+                        if (v === "milestone" && fields.length === 0) {
+                          append(defaultMilestone());
                         }
-                        if (v !== 'milestone') {
-                          replace([])
+                        if (v !== "milestone") {
+                          replace([]);
                         }
                       }}
                     >
@@ -245,7 +261,9 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="buyer">Buyer (you fund)</SelectItem>
-                        <SelectItem value="seller">Seller (you deliver)</SelectItem>
+                        <SelectItem value="seller">
+                          Seller (you deliver)
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -275,7 +293,11 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea rows={4} placeholder="What is being delivered or paid for?" {...field} />
+                    <Textarea
+                      rows={4}
+                      placeholder="What is being delivered or paid for?"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -319,10 +341,10 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                         name={field.name}
                         ref={field.ref}
                         onBlur={field.onBlur}
-                        value={field.value == null ? '' : String(field.value)}
+                        value={field.value == null ? "" : String(field.value)}
                         onChange={(e) => {
-                          const v = e.target.value
-                          field.onChange(v === '' ? undefined : v)
+                          const v = e.target.value;
+                          field.onChange(v === "" ? undefined : v);
                         }}
                       />
                     </FormControl>
@@ -358,7 +380,12 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                   <FormItem>
                     <FormLabel>Inspection period (hours)</FormLabel>
                     <FormControl>
-                      <Input type="number" inputMode="numeric" min={1} {...field} />
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -371,7 +398,12 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                   <FormItem>
                     <FormLabel>Dispute window (hours)</FormLabel>
                     <FormControl>
-                      <Input type="number" inputMode="numeric" min={1} {...field} />
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -416,13 +448,15 @@ export function CreateEscrowForm({ className }: { className?: string }) {
               />
             </div>
 
-            {escrowType === 'milestone' ? (
+            {escrowType === "milestone" ? (
               <>
                 <Separator />
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h3 className={cn(e.typography.statLabel, 'mb-1')}>Milestones</h3>
+                      <h3 className={cn(e.typography.statLabel, "mb-1")}>
+                        Milestones
+                      </h3>
                       <p className="text-sm text-muted-foreground">
                         Amounts should sum to the total escrow amount.
                       </p>
@@ -446,7 +480,10 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                   ) : (
                     <ul className="space-y-6">
                       {fields.map((row, index) => (
-                        <li key={row.id} className="rounded-xl border bg-muted/15 p-4">
+                        <li
+                          key={row.id}
+                          className="rounded-xl border bg-muted/15 p-4"
+                        >
                           <div className="mb-4 flex items-center justify-between gap-2">
                             <span className="text-sm font-medium text-muted-foreground">
                               Milestone {index + 1}
@@ -507,10 +544,16 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                                         name={field.name}
                                         ref={field.ref}
                                         onBlur={field.onBlur}
-                                        value={field.value == null ? '' : String(field.value)}
+                                        value={
+                                          field.value == null
+                                            ? ""
+                                            : String(field.value)
+                                        }
                                         onChange={(e) => {
-                                          const v = e.target.value
-                                          field.onChange(v === '' ? undefined : v)
+                                          const v = e.target.value;
+                                          field.onChange(
+                                            v === "" ? undefined : v,
+                                          );
                                         }}
                                       />
                                     </FormControl>
@@ -538,7 +581,12 @@ export function CreateEscrowForm({ className }: { className?: string }) {
                                   <FormItem>
                                     <FormLabel>Inspection (hrs)</FormLabel>
                                     <FormControl>
-                                      <Input type="number" inputMode="numeric" min={1} {...field} />
+                                      <Input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={1}
+                                        {...field}
+                                      />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -560,16 +608,25 @@ export function CreateEscrowForm({ className }: { className?: string }) {
             ) : null}
 
             <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" className="rounded-full" asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                asChild
+              >
                 <Link href="/escrows">Cancel</Link>
               </Button>
-              <Button type="submit" className="rounded-full" disabled={initMutation.isPending}>
-                {initMutation.isPending ? 'Creating…' : 'Create escrow'}
+              <Button
+                type="submit"
+                className="rounded-full"
+                disabled={initMutation.isPending}
+              >
+                {initMutation.isPending ? "Creating…" : "Create escrow"}
               </Button>
             </div>
           </CardContent>
         </form>
       </Form>
     </Card>
-  )
+  );
 }
