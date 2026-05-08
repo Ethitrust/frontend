@@ -48,6 +48,7 @@ import {
   fetchMeWalletTransactions,
   pickDefaultWalletId,
 } from "@/lib/wallets/me-wallet-api";
+import { fetchManualKycSubmissionStatus } from "@/lib/kyc/me-kyc-api";
 import type {
   WalletRow,
   WalletTransactionItem,
@@ -262,6 +263,13 @@ export function DashboardOverview() {
       accessToken && preferredWalletId && walletsQuery.isSuccess,
     ),
   });
+  
+  const kycManualQuery = useQuery({
+    queryKey: ["me", "kyc", "manual-status"],
+    queryFn: () => fetchManualKycSubmissionStatus(accessToken!),
+    enabled: Boolean(accessToken),
+    retry: false,
+  });
 
   const sessionSuccess = Boolean(
     accessToken && meQuery.isSuccess && profileQuery.isSuccess,
@@ -283,6 +291,23 @@ export function DashboardOverview() {
   const kycPresentation = displayProfile
     ? presentKycStatus(displayProfile.kyc_status)
     : null;
+
+  const manualKycStatus = normalizeKycStatus(kycManualQuery.data?.status);
+
+  const effectiveKycStatus = useMemo(() => {
+    if (kycDone) return "verified";
+    const inReview = ["pending", "in_review", "processing"].includes(kycStatusRaw) || ["pending", "in_review", "processing"].includes(manualKycStatus);
+    if (inReview) return "in_review";
+    const submitted = ["submitted", "documents_submitted"].includes(kycStatusRaw) || ["submitted", "documents_submitted"].includes(manualKycStatus);
+    if (submitted) return "submitted";
+    const rejected = ["rejected", "failed", "declined"].includes(kycStatusRaw) || ["rejected", "failed", "declined"].includes(manualKycStatus);
+    if (rejected) return "rejected";
+    return kycStatusRaw;
+  }, [kycDone, kycStatusRaw, manualKycStatus]);
+
+  const effectivePresentation = useMemo(() => {
+    return presentKycStatus(effectiveKycStatus);
+  }, [effectiveKycStatus]);
 
   useEffect(() => {
     if (!displayMe?.id) return;
@@ -307,7 +332,7 @@ export function DashboardOverview() {
       };
     }
 
-    if (["pending", "in_review", "processing"].includes(kycStatusRaw)) {
+    if (effectiveKycStatus === "in_review") {
       return {
         kind: "in_review" as const,
         title: "Identity verification under review",
@@ -317,7 +342,7 @@ export function DashboardOverview() {
       };
     }
 
-    if (["submitted", "documents_submitted"].includes(kycStatusRaw)) {
+    if (effectiveKycStatus === "submitted") {
       return {
         kind: "submitted" as const,
         title: "Identity verification submitted",
@@ -327,7 +352,7 @@ export function DashboardOverview() {
       };
     }
 
-    if (["rejected", "failed", "declined"].includes(kycStatusRaw)) {
+    if (effectiveKycStatus === "rejected") {
       return {
         kind: "rejected" as const,
         title: "Identity verification needs attention",
@@ -339,7 +364,7 @@ export function DashboardOverview() {
 
     if (
       ["", "none", "not_started", "unverified", "unknown"].includes(
-        kycStatusRaw,
+        effectiveKycStatus,
       )
     ) {
       return {
@@ -354,12 +379,12 @@ export function DashboardOverview() {
     return {
       kind: "other" as const,
       title: "Identity verification",
-      description: kycPresentation
-        ? `Status: ${kycPresentation.label}. ${kycPresentation.description}`
+      description: effectivePresentation
+        ? `Status: ${effectivePresentation.label}. ${effectivePresentation.description}`
         : "Open Compliance to review your current verification status.",
       cta: { label: "View status", href: "/kyc" },
     };
-  }, [displayProfile, kycDone, kycPresentation, kycStatusRaw]);
+  }, [effectiveKycStatus, kycDone, effectivePresentation]);
 
   const greetingFirst =
     displayProfile?.first_name?.trim() ||
@@ -689,9 +714,7 @@ export function DashboardOverview() {
               <Skeleton className="mt-3 h-8 w-40 rounded-lg" aria-hidden />
             ) : (
               <CardTitle className="font-serif text-xl font-normal tracking-tight capitalize">
-                {presentKycStatus(
-                  displayProfile.kyc_status,
-                ).label.toLowerCase()}
+                {effectivePresentation.label.toLowerCase()}
               </CardTitle>
             )}
           </CardHeader>
