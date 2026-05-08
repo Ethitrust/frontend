@@ -39,5 +39,9 @@ export async function fetchAuthProfile(accessToken: string): Promise<AuthProfile
   if (!res.ok) {
     throw new Error(getBffErrorMessage(data))
   }
-  return data as AuthProfileRow
+  const payload = data as { profile: AuthProfileRow }
+  if (!payload || !payload.profile) {
+    throw new Error('Unexpected profile response structure')
+  }
+  return payload.profile
 }
