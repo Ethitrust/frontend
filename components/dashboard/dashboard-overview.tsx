@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useMemo } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,114 +13,133 @@ import {
   Mail,
   PlusCircle,
   ShieldCheck,
-} from 'lucide-react'
+} from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { EscrowPreviewClickableRow } from '@/components/escrows/clickable-escrow-row'
-import { Skeleton } from '@/components/ui/skeleton'
-import { fetchAuthMe, fetchAuthProfile } from '@/lib/auth/me-session-api'
-import type { EscrowDisputeRow } from '@/lib/disputes/dispute-types'
-import { fetchMeDisputes } from '@/lib/disputes/me-disputes-api'
-import { fetchMeEscrows } from '@/lib/escrows/me-escrows-api'
-import type { EscrowListItem, PaginatedEscrowsList } from '@/lib/escrows/escrow-list-types'
-import { isKycCompleted, presentKycStatus } from '@/lib/kyc/kyc-presentation'
-import type { PaginatedNotifications, NotificationRow } from '@/lib/notifications/notification-types'
-import { fetchMeNotifications } from '@/lib/notifications/me-notifications-api'
-import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
-import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth-store'
-import { fetchMeWalletList, fetchMeWalletTransactions, pickDefaultWalletId } from '@/lib/wallets/me-wallet-api'
-import type { WalletRow, WalletTransactionItem } from '@/lib/wallets/wallet-types'
+} from "@/components/ui/card";
+import { EscrowPreviewClickableRow } from "@/components/escrows/clickable-escrow-row";
+import { Skeleton } from "@/components/ui/skeleton";
+import { fetchAuthMe, fetchAuthProfile } from "@/lib/auth/me-session-api";
+import type { EscrowDisputeRow } from "@/lib/disputes/dispute-types";
+import { fetchMeDisputes } from "@/lib/disputes/me-disputes-api";
+import { fetchMeEscrows } from "@/lib/escrows/me-escrows-api";
+import type {
+  EscrowListItem,
+  PaginatedEscrowsList,
+} from "@/lib/escrows/escrow-list-types";
+import { isKycCompleted, presentKycStatus } from "@/lib/kyc/kyc-presentation";
+import type {
+  PaginatedNotifications,
+  NotificationRow,
+} from "@/lib/notifications/notification-types";
+import { fetchMeNotifications } from "@/lib/notifications/me-notifications-api";
+import { ethitrustThemeTokens } from "@/lib/ethitrust-theme";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  fetchMeWalletList,
+  fetchMeWalletTransactions,
+  pickDefaultWalletId,
+} from "@/lib/wallets/me-wallet-api";
+import type {
+  WalletRow,
+  WalletTransactionItem,
+} from "@/lib/wallets/wallet-types";
 
 const ACTIVE_ESCROW_STATUSES = new Set([
-  'active',
-  'invited',
-  'pending_funding',
-  'pending_acceptance',
-])
+  "active",
+  "invited",
+  "pending_funding",
+  "pending_acceptance",
+]);
 
-const ESCROW_SNAPSHOT_PAGE_SIZE = 50
-const ESCROW_PREVIEW_ROWS = 6
+const ESCROW_SNAPSHOT_PAGE_SIZE = 50;
+const ESCROW_PREVIEW_ROWS = 6;
+
+function normalizeKycStatus(status: string | undefined | null) {
+  return (status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+}
 
 function formatMoney(amount: number, currency: string) {
   try {
-    return new Intl.NumberFormat('en-ET', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-ET", {
+      style: "currency",
       currency,
       maximumFractionDigits: 2,
-    }).format(amount)
+    }).format(amount);
   } catch {
-    return `${amount.toLocaleString()} ${currency}`
+    return `${amount.toLocaleString()} ${currency}`;
   }
 }
 
 function formatShortDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function escrowStatusPresentation(status: string) {
-  const s = status.replace(/_/g, ' ')
+  const s = status.replace(/_/g, " ");
   const variant =
-    status === 'active'
-      ? 'secondary'
-      : status === 'completed'
-        ? 'outline'
-        : status === 'invited'
-          ? 'outline'
-          : 'default'
-  return { label: s.charAt(0).toUpperCase() + s.slice(1), variant } as const
+    status === "active"
+      ? "secondary"
+      : status === "completed"
+        ? "outline"
+        : status === "invited"
+          ? "outline"
+          : "default";
+  return { label: s.charAt(0).toUpperCase() + s.slice(1), variant } as const;
 }
 
 function pickPrimaryWalletStats(wallets: WalletRow[]): {
-  balance: number
-  locked_balance: number
-  currency: string
+  balance: number;
+  locked_balance: number;
+  currency: string;
 } {
-  const id = pickDefaultWalletId(wallets)
-  const primary = wallets.find((w) => w.id === id) ?? wallets[0]
-  if (!primary)
-    return { balance: 0, locked_balance: 0, currency: 'ETB' }
+  const id = pickDefaultWalletId(wallets);
+  const primary = wallets.find((w) => w.id === id) ?? wallets[0];
+  if (!primary) return { balance: 0, locked_balance: 0, currency: "ETB" };
   return {
     balance: primary.balance,
     locked_balance: primary.locked_balance,
     currency: primary.currency,
-  }
+  };
 }
 
 function countActiveAmong(items: EscrowListItem[]) {
-  return items.filter((e) => ACTIVE_ESCROW_STATUSES.has(e.status)).length
+  return items.filter((e) => ACTIVE_ESCROW_STATUSES.has(e.status)).length;
 }
 
 function disputeNeedsAttention(d: EscrowDisputeRow) {
-  const s = (d.status ?? '').toLowerCase()
-  if (!s) return false
-  return !/resolved|closed|cancel|canceled|settled|completed/.test(s)
+  const s = (d.status ?? "").toLowerCase();
+  if (!s) return false;
+  return !/resolved|closed|cancel|canceled|settled|completed/.test(s);
 }
 
 function ledgerLabelForTxn(t: WalletTransactionItem) {
-  const raw = String(t.type || 'transaction').replace(/_/g, ' ')
-  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'Transaction'
+  const raw = String(t.type || "transaction").replace(/_/g, " ");
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "Transaction";
 }
 
 export type DashboardActivity = {
-  id: string
-  label: string
-  detail: string
-  at: string
-  href: string
-}
+  id: string;
+  label: string;
+  detail: string;
+  at: string;
+  href: string;
+};
 
 function buildActivityFeed(
   notifications: NotificationRow[],
@@ -128,90 +147,96 @@ function buildActivityFeed(
 ): DashboardActivity[] {
   const notifActs: DashboardActivity[] = notifications.map((n) => ({
     id: `n-${n.id}`,
-    label: n.title.trim() || 'Notification',
-    detail: (n.body || '').slice(0, 160),
+    label: n.title.trim() || "Notification",
+    detail: (n.body || "").slice(0, 160),
     at: n.created_at,
-    href: '/notifications',
-  }))
+    href: "/notifications",
+  }));
 
   const txnActs: DashboardActivity[] = transactions.map((t) => {
-    const escrow = typeof t.escrow_id === 'string' && t.escrow_id.length > 0
-    const href = escrow ? `/escrows/${encodeURIComponent(t.escrow_id!)}` : '/wallet/transactions'
-    const amt = `${t.currency} ${t.amount.toLocaleString()}`
+    const escrow = typeof t.escrow_id === "string" && t.escrow_id.length > 0;
+    const href = escrow
+      ? `/escrows/${encodeURIComponent(t.escrow_id!)}`
+      : "/wallet/transactions";
+    const amt = `${t.currency} ${t.amount.toLocaleString()}`;
     return {
       id: `tx-${t.id}`,
       label: ledgerLabelForTxn(t),
       detail:
-        typeof t.description === 'string' && t.description.trim()
+        typeof t.description === "string" && t.description.trim()
           ? t.description.trim().slice(0, 140)
-          : `${amt}${t.reference ? ` · ${t.reference}` : ''}`,
+          : `${amt}${t.reference ? ` · ${t.reference}` : ""}`,
       at: t.created_at,
       href,
-    }
-  })
+    };
+  });
 
   const merged = [...notifActs, ...txnActs]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 10)
+    .slice(0, 10);
 
-  return merged
+  return merged;
 }
 
-function statsLoadWarning(
-  escrows: PaginatedEscrowsList | undefined,
-): { activeCount: number; note: string | null } {
-  if (!escrows) return { activeCount: 0, note: null }
-  const chunk = escrows.items
-  const activeCount = countActiveAmong(chunk)
+function statsLoadWarning(escrows: PaginatedEscrowsList | undefined): {
+  activeCount: number;
+  note: string | null;
+} {
+  if (!escrows) return { activeCount: 0, note: null };
+  const chunk = escrows.items;
+  const activeCount = countActiveAmong(chunk);
   if (!chunk.length && escrows.total === 0)
-    return { activeCount: 0, note: null }
-  if (chunk.length >= escrows.total)
-    return { activeCount, note: null }
+    return { activeCount: 0, note: null };
+  if (chunk.length >= escrows.total) return { activeCount, note: null };
   return {
     activeCount,
     note: `${escrows.total} escrows overall — counting active among the first ${chunk.length} fetched.`,
-  }
+  };
 }
 
 export function DashboardOverview() {
-  const e = ethitrustThemeTokens
-  const accessToken = useAuthStore((s) => s.accessToken)
+  const e = ethitrustThemeTokens;
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  const [dismissedVerifiedKyc, setDismissedVerifiedKyc] = useState<
+    boolean | null
+  >(null);
 
   const [meQuery, profileQuery] = useQueries({
     queries: [
       {
-        queryKey: ['me', 'auth', 'me'],
+        queryKey: ["me", "auth", "me"],
         queryFn: () => fetchAuthMe(accessToken!),
         enabled: Boolean(accessToken),
       },
       {
-        queryKey: ['me', 'auth', 'profile'],
+        queryKey: ["me", "auth", "profile"],
         queryFn: () => fetchAuthProfile(accessToken!),
         enabled: Boolean(accessToken),
       },
     ],
-  })
+  });
 
   const walletsQuery = useQuery({
-    queryKey: ['me', 'wallets'],
+    queryKey: ["me", "wallets"],
     queryFn: () => fetchMeWalletList(accessToken!),
     enabled: Boolean(accessToken),
-  })
+  });
 
   const escrowsQuery = useQuery({
-    queryKey: ['me', 'escrows', 'dashboard', ESCROW_SNAPSHOT_PAGE_SIZE],
+    queryKey: ["me", "escrows", "dashboard", ESCROW_SNAPSHOT_PAGE_SIZE],
     queryFn: () => fetchMeEscrows(accessToken!, 1, ESCROW_SNAPSHOT_PAGE_SIZE),
     enabled: Boolean(accessToken),
-  })
+  });
 
   const disputesQuery = useQuery({
-    queryKey: ['me', 'disputes', 'dashboard', 'page1'],
+    queryKey: ["me", "disputes", "dashboard", "page1"],
     queryFn: () => fetchMeDisputes(accessToken!, 1, 25),
     enabled: Boolean(accessToken),
-  })
+  });
 
   const notificationsQuery = useQuery({
-    queryKey: ['me', 'notifications', 'preview', 12],
+    queryKey: ["me", "notifications", "preview", 12],
     queryFn: () =>
       fetchMeNotifications(accessToken!, {
         page: 1,
@@ -219,89 +244,205 @@ export function DashboardOverview() {
         unreadOnly: false,
       }),
     enabled: Boolean(accessToken),
-  })
+  });
 
   const preferredWalletId = useMemo(
     () =>
-      walletsQuery.data?.length ? pickDefaultWalletId(walletsQuery.data) ?? null : null,
+      walletsQuery.data?.length
+        ? (pickDefaultWalletId(walletsQuery.data) ?? null)
+        : null,
     [walletsQuery.data],
-  )
+  );
 
   const walletTxQuery = useQuery({
-    queryKey: ['me', 'wallets', preferredWalletId, 'recent-tx-dashboard'],
-    queryFn: () => fetchMeWalletTransactions(accessToken!, preferredWalletId!, 1, 8),
-    enabled: Boolean(accessToken && preferredWalletId && walletsQuery.isSuccess),
-  })
+    queryKey: ["me", "wallets", preferredWalletId, "recent-tx-dashboard"],
+    queryFn: () =>
+      fetchMeWalletTransactions(accessToken!, preferredWalletId!, 1, 8),
+    enabled: Boolean(
+      accessToken && preferredWalletId && walletsQuery.isSuccess,
+    ),
+  });
 
-  const sessionSuccess = Boolean(accessToken && meQuery.isSuccess && profileQuery.isSuccess)
-  const sessionPending = Boolean(accessToken && (meQuery.isPending || profileQuery.isPending))
+  const sessionSuccess = Boolean(
+    accessToken && meQuery.isSuccess && profileQuery.isSuccess,
+  );
+  const sessionPending = Boolean(
+    accessToken && (meQuery.isPending || profileQuery.isPending),
+  );
   const sessionErrored = Boolean(
     accessToken && !sessionPending && (meQuery.isError || profileQuery.isError),
-  )
+  );
 
-  const displayMe = sessionSuccess ? meQuery.data : null
-  const displayProfile = sessionSuccess ? profileQuery.data : null
+  const displayMe = sessionSuccess ? meQuery.data : null;
+  const displayProfile = sessionSuccess ? profileQuery.data : null;
 
-  const kycDone = displayProfile ? isKycCompleted(displayProfile.kyc_status) : false
+  const kycDone = displayProfile
+    ? isKycCompleted(displayProfile.kyc_status)
+    : false;
+  const kycStatusRaw = normalizeKycStatus(displayProfile?.kyc_status);
+  const kycPresentation = displayProfile
+    ? presentKycStatus(displayProfile.kyc_status)
+    : null;
 
-  const greetingFirst = displayProfile?.first_name?.trim() ||
+  useEffect(() => {
+    if (!displayMe?.id) return;
+    const storageKey = `ethitrust:dashboard:kyc-verified-dismissed:${displayMe.id}`;
+    try {
+      setDismissedVerifiedKyc(localStorage.getItem(storageKey) === "1");
+    } catch {
+      setDismissedVerifiedKyc(false);
+    }
+  }, [displayMe?.id]);
+
+  const kycBanner = useMemo(() => {
+    if (!displayProfile) return null;
+
+    if (kycDone) {
+      return {
+        kind: "verified" as const,
+        title: "Identity verification complete",
+        description:
+          "Your KYC is verified. You can accept escrows and move funds without verification holds.",
+        cta: null as null,
+      };
+    }
+
+    if (["pending", "in_review", "processing"].includes(kycStatusRaw)) {
+      return {
+        kind: "in_review" as const,
+        title: "Identity verification under review",
+        description:
+          "Your KYC is under review. Some actions stay limited until it is approved.",
+        cta: { label: "View status", href: "/kyc" },
+      };
+    }
+
+    if (["submitted", "documents_submitted"].includes(kycStatusRaw)) {
+      return {
+        kind: "submitted" as const,
+        title: "Identity verification submitted",
+        description:
+          "We received your documents and queued them for review. Some actions stay limited until approval.",
+        cta: { label: "View status", href: "/kyc" },
+      };
+    }
+
+    if (["rejected", "failed", "declined"].includes(kycStatusRaw)) {
+      return {
+        kind: "rejected" as const,
+        title: "Identity verification needs attention",
+        description:
+          "Your verification was rejected. Resubmit with corrected details to unlock escrow and wallet actions.",
+        cta: { label: "Fix and resubmit", href: "/kyc" },
+      };
+    }
+
+    if (
+      ["", "none", "not_started", "unverified", "unknown"].includes(
+        kycStatusRaw,
+      )
+    ) {
+      return {
+        kind: "not_started" as const,
+        title: "Complete identity verification",
+        description:
+          "KYC is required before you can accept escrows or move certain funds.",
+        cta: { label: "Start KYC", href: "/kyc" },
+      };
+    }
+
+    return {
+      kind: "other" as const,
+      title: "Identity verification",
+      description: kycPresentation
+        ? `Status: ${kycPresentation.label}. ${kycPresentation.description}`
+        : "Open Compliance to review your current verification status.",
+      cta: { label: "View status", href: "/kyc" },
+    };
+  }, [displayProfile, kycDone, kycPresentation, kycStatusRaw]);
+
+  const greetingFirst =
+    displayProfile?.first_name?.trim() ||
     displayMe?.name?.split(/\s+/)[0] ||
-    'there'
+    "there";
 
   const qErr =
-    ([meQuery, profileQuery].find((x) => x.error)?.error as Error | undefined)?.message ?? ''
+    ([meQuery, profileQuery].find((x) => x.error)?.error as Error | undefined)
+      ?.message ?? "";
 
-  const disputeAlert = disputesQuery.data?.items.find((d) => disputeNeedsAttention(d))
+  const disputeAlert = disputesQuery.data?.items.find((d) =>
+    disputeNeedsAttention(d),
+  );
 
   const statsFromWallet =
-    walletsQuery.data && walletsQuery.data.length ? pickPrimaryWalletStats(walletsQuery.data) : null
+    walletsQuery.data && walletsQuery.data.length
+      ? pickPrimaryWalletStats(walletsQuery.data)
+      : null;
 
-  const { activeCount, note: escrowStatNote } = statsLoadWarning(escrowsQuery.data)
+  const { activeCount, note: escrowStatNote } = statsLoadWarning(
+    escrowsQuery.data,
+  );
 
   const escrowPreviewRows: EscrowListItem[] =
-    escrowsQuery.data?.items.slice(0, ESCROW_PREVIEW_ROWS) ?? []
+    escrowsQuery.data?.items.slice(0, ESCROW_PREVIEW_ROWS) ?? [];
 
-  const notifEnvelope: PaginatedNotifications | undefined = notificationsQuery.data
-  const notifPreview: NotificationRow[] = notifEnvelope?.items.slice(0, 6) ?? []
-  const unreadNotifications = typeof notifEnvelope?.unread_count === 'number' ? notifEnvelope.unread_count : 0
+  const notifEnvelope: PaginatedNotifications | undefined =
+    notificationsQuery.data;
+  const notifPreview: NotificationRow[] =
+    notifEnvelope?.items.slice(0, 6) ?? [];
+  const unreadNotifications =
+    typeof notifEnvelope?.unread_count === "number"
+      ? notifEnvelope.unread_count
+      : 0;
 
   const activityFeed = buildActivityFeed(
     notificationsQuery.data?.items ?? [],
     walletTxQuery.data?.items ?? [],
-  )
+  );
 
   const showActivitySkeleton =
     activityFeed.length === 0 &&
     (notificationsQuery.isPending ||
-      (Boolean(preferredWalletId) && walletTxQuery.isPending))
+      (Boolean(preferredWalletId) && walletTxQuery.isPending));
 
   const dataSectionErrors = [
     walletsQuery.error && `Wallet: ${(walletsQuery.error as Error).message}`,
     escrowsQuery.error && `Escrows: ${(escrowsQuery.error as Error).message}`,
-    disputesQuery.error && `Disputes: ${(disputesQuery.error as Error).message}`,
+    disputesQuery.error &&
+      `Disputes: ${(disputesQuery.error as Error).message}`,
     notificationsQuery.error &&
       `Notifications: ${(notificationsQuery.error as Error).message}`,
     walletTxQuery.error &&
       walletsQuery.data &&
       walletsQuery.data.length > 0 &&
       `Activity: ${(walletTxQuery.error as Error).message}`,
-  ].filter(Boolean) as string[]
+  ].filter(Boolean) as string[];
 
   if (!accessToken) {
     return (
-      <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
+      <div className={cn(e.layout.container, "py-8 lg:py-12")}>
         <header className="max-w-3xl">
-          <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Workspace</p>
-          <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>
+          <p className={cn(e.typography.eyebrow, "text-muted-foreground")}>
+            Workspace
+          </p>
+          <h1
+            className={cn(
+              e.typography.displayLG,
+              "mt-2 font-serif font-normal text-foreground",
+            )}
+          >
             Your dashboard
           </h1>
-          <p className={cn(e.typography.bodyMuted, 'mt-3 max-w-xl')}>
-            Sign in to sync wallet balances, escrows you participate in, team invites, and in-app notices.
+          <p className={cn(e.typography.bodyMuted, "mt-3 max-w-xl")}>
+            Sign in to sync wallet balances, escrows you participate in, team
+            invites, and in-app notices.
           </p>
         </header>
         <Card className="mt-10 max-w-lg shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Continue to Ethi-Trust</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Continue to Ethi-Trust
+            </CardTitle>
             <CardDescription>
               Protected workspace data stays server-side linked to your account.
             </CardDescription>
@@ -313,23 +454,30 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
-    <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
+    <div className={cn(e.layout.container, "py-8 lg:py-12")}>
       <header className="max-w-3xl">
-        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Workspace</p>
+        <p className={cn(e.typography.eyebrow, "text-muted-foreground")}>
+          Workspace
+        </p>
         {sessionPending ? (
           <Skeleton className="mt-4 h-10 max-w-lg rounded-lg" aria-hidden />
         ) : (
-          <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>
+          <h1
+            className={cn(
+              e.typography.displayLG,
+              "mt-2 font-serif font-normal text-foreground",
+            )}
+          >
             Welcome back, {greetingFirst}
           </h1>
         )}
-        <p className={cn(e.typography.bodyMuted, 'mt-3 max-w-xl')}>
-          Your wallet, active escrows, and latest updates in one place — loaded from live account data when the API
-          is reachable.
+        <p className={cn(e.typography.bodyMuted, "mt-3 max-w-xl")}>
+          Your wallet, active escrows, and latest updates in one place — loaded
+          from live account data when the API is reachable.
         </p>
       </header>
 
@@ -337,8 +485,8 @@ export function DashboardOverview() {
         <Alert variant="destructive" className="mt-8">
           <AlertTitle>Could not load your session profile</AlertTitle>
           <AlertDescription>
-            {qErr.length > 0 ? qErr : 'Request failed'}. Open Compliance (KYC) or sign out and sign in again to
-            retry.
+            {qErr.length > 0 ? qErr : "Request failed"}. Open Compliance (KYC)
+            or sign out and sign in again to retry.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -350,20 +498,51 @@ export function DashboardOverview() {
               <Mail aria-hidden />
               <AlertTitle>Verify your email</AlertTitle>
               <AlertDescription>
-                Some actions stay limited until your email is confirmed. Check your inbox for the Ethi-Trust
-                verification link.
+                Some actions stay limited until your email is confirmed. Check
+                your inbox for the Ethi-Trust verification link.
               </AlertDescription>
             </Alert>
           ) : null}
 
-          {!kycDone ? (
+          {kycBanner && kycBanner.kind !== "verified" ? (
             <Alert className="mt-8 border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
               <ShieldCheck aria-hidden />
-              <AlertTitle>Complete identity verification</AlertTitle>
+              <AlertTitle>{kycBanner.title}</AlertTitle>
               <AlertDescription className="flex flex-wrap items-center gap-3">
-                <span>KYC is required before you can accept escrows or move certain funds.</span>
-                <Button size="sm" className="rounded-full" asChild>
-                  <Link href="/kyc">Continue KYC</Link>
+                <span>{kycBanner.description}</span>
+                {kycBanner.cta ? (
+                  <Button size="sm" className="rounded-full" asChild>
+                    <Link href={kycBanner.cta.href}>{kycBanner.cta.label}</Link>
+                  </Button>
+                ) : null}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {kycBanner &&
+          kycBanner.kind === "verified" &&
+          dismissedVerifiedKyc === false ? (
+            <Alert className="mt-8">
+              <ShieldCheck aria-hidden />
+              <AlertTitle>{kycBanner.title}</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>{kycBanner.description}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full"
+                  onClick={() => {
+                    if (!displayMe?.id) return;
+                    const storageKey = `ethitrust:dashboard:kyc-verified-dismissed:${displayMe.id}`;
+                    try {
+                      localStorage.setItem(storageKey, "1");
+                    } catch {
+                      // ignore write errors
+                    }
+                    setDismissedVerifiedKyc(true);
+                  }}
+                >
+                  Dismiss
                 </Button>
               </AlertDescription>
             </Alert>
@@ -390,20 +569,30 @@ export function DashboardOverview() {
           <AlertTitle>Open dispute needs attention</AlertTitle>
           <AlertDescription className="flex flex-wrap items-center gap-3">
             <span>
-              {disputeAlert.reason?.trim() || 'Active dispute'} — status{' '}
+              {disputeAlert.reason?.trim() || "Active dispute"} — status{" "}
               <span className="font-medium">
-                {(disputeAlert.status ?? 'open').replace(/_/g, ' ')}
+                {(disputeAlert.status ?? "open").replace(/_/g, " ")}
               </span>
               .
             </span>
-            <Button size="sm" variant="secondary" className="rounded-full" asChild>
-              <Link href={`/disputes/${encodeURIComponent(disputeAlert.id)}`}>Open dispute room</Link>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="rounded-full"
+              asChild
+            >
+              <Link href={`/disputes/${encodeURIComponent(disputeAlert.id)}`}>
+                Open dispute room
+              </Link>
             </Button>
           </AlertDescription>
         </Alert>
       ) : null}
 
-      <section className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Summary stats">
+      <section
+        className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Summary stats"
+      >
         <Card className="gap-4 py-5 shadow-sm">
           <CardHeader className="px-5 pb-0">
             <CardDescription>Wallet balance</CardDescription>
@@ -412,8 +601,11 @@ export function DashboardOverview() {
             ) : (
               <CardTitle className="font-serif text-2xl font-normal tracking-tight">
                 {statsFromWallet
-                  ? formatMoney(statsFromWallet.balance, statsFromWallet.currency)
-                  : formatMoney(0, 'ETB')}
+                  ? formatMoney(
+                      statsFromWallet.balance,
+                      statsFromWallet.currency,
+                    )
+                  : formatMoney(0, "ETB")}
               </CardTitle>
             )}
           </CardHeader>
@@ -421,9 +613,13 @@ export function DashboardOverview() {
             <p className="text-sm text-muted-foreground">
               {statsFromWallet
                 ? `${formatMoney(statsFromWallet.locked_balance, statsFromWallet.currency)} held in active escrows`
-                : 'No wallets returned yet'}
+                : "No wallets returned yet"}
             </p>
-            <Button variant="link" className="mt-1 h-auto px-0 text-accent-foreground" asChild>
+            <Button
+              variant="link"
+              className="mt-1 h-auto px-0 text-accent-foreground"
+              asChild
+            >
               <Link href="/wallet">
                 Wallet details <ArrowRight className="size-3.5" />
               </Link>
@@ -437,14 +633,21 @@ export function DashboardOverview() {
             {escrowsQuery.isPending ? (
               <Skeleton className="mt-3 h-9 w-12 rounded-lg" aria-hidden />
             ) : (
-              <CardTitle className="font-serif text-2xl font-normal tracking-tight">{activeCount}</CardTitle>
+              <CardTitle className="font-serif text-2xl font-normal tracking-tight">
+                {activeCount}
+              </CardTitle>
             )}
           </CardHeader>
           <CardContent className="px-5 pt-0">
             <p className="text-sm text-muted-foreground">
-              {escrowStatNote ?? `${escrowsQuery.data?.total ?? 0} total escrow records`}
+              {escrowStatNote ??
+                `${escrowsQuery.data?.total ?? 0} total escrow records`}
             </p>
-            <Button variant="link" className="mt-1 h-auto px-0 text-accent-foreground" asChild>
+            <Button
+              variant="link"
+              className="mt-1 h-auto px-0 text-accent-foreground"
+              asChild
+            >
               <Link href="/escrows">
                 View all <ArrowRight className="size-3.5" />
               </Link>
@@ -458,14 +661,20 @@ export function DashboardOverview() {
             {notificationsQuery.isPending ? (
               <Skeleton className="mt-3 h-9 w-12 rounded-lg" aria-hidden />
             ) : (
-              <CardTitle className="font-serif text-2xl font-normal tracking-tight">{unreadNotifications}</CardTitle>
+              <CardTitle className="font-serif text-2xl font-normal tracking-tight">
+                {unreadNotifications}
+              </CardTitle>
             )}
           </CardHeader>
           <CardContent className="px-5 pt-0">
             <p className="text-sm text-muted-foreground">
               {(notifEnvelope?.total ?? 0).toLocaleString()} messages in inbox
             </p>
-            <Button variant="link" className="mt-1 h-auto px-0 text-accent-foreground" asChild>
+            <Button
+              variant="link"
+              className="mt-1 h-auto px-0 text-accent-foreground"
+              asChild
+            >
               <Link href="/notifications">
                 Notification center <ArrowRight className="size-3.5" />
               </Link>
@@ -480,7 +689,9 @@ export function DashboardOverview() {
               <Skeleton className="mt-3 h-8 w-40 rounded-lg" aria-hidden />
             ) : (
               <CardTitle className="font-serif text-xl font-normal tracking-tight capitalize">
-                {presentKycStatus(displayProfile.kyc_status).label.toLowerCase()}
+                {presentKycStatus(
+                  displayProfile.kyc_status,
+                ).label.toLowerCase()}
               </CardTitle>
             )}
           </CardHeader>
@@ -489,11 +700,15 @@ export function DashboardOverview() {
               <Skeleton className="mt-3 h-4 w-full max-w-56" aria-hidden />
             ) : (
               <p className="text-sm text-muted-foreground">
-                {displayMe.two_factor_enabled ? '2FA on' : '2FA off'} · Email{' '}
-                {displayMe.email_verified ? 'verified' : 'pending'}
+                {displayMe.two_factor_enabled ? "2FA on" : "2FA off"} · Email{" "}
+                {displayMe.email_verified ? "verified" : "pending"}
               </p>
             )}
-            <Button variant="link" className="mt-1 h-auto px-0 text-accent-foreground" asChild>
+            <Button
+              variant="link"
+              className="mt-1 h-auto px-0 text-accent-foreground"
+              asChild
+            >
               <Link href="/kyc">
                 KYC & documents <ArrowRight className="size-3.5" />
               </Link>
@@ -503,7 +718,7 @@ export function DashboardOverview() {
       </section>
 
       <section className="mt-10" aria-label="Quick actions">
-        <h2 className={cn(e.typography.statLabel, 'mb-3')}>Quick actions</h2>
+        <h2 className={cn(e.typography.statLabel, "mb-3")}>Quick actions</h2>
         <div className="flex flex-wrap gap-2">
           <Button className="rounded-full" asChild>
             <Link href="/escrows/new">
@@ -511,25 +726,41 @@ export function DashboardOverview() {
               New escrow
             </Link>
           </Button>
-          <Button variant="outline" className="rounded-full bg-background/60" asChild>
+          <Button
+            variant="outline"
+            className="rounded-full bg-background/60"
+            asChild
+          >
             <Link href="/wallet/deposit">
               <Landmark />
               Deposit
             </Link>
           </Button>
-          <Button variant="outline" className="rounded-full bg-background/60" asChild>
+          <Button
+            variant="outline"
+            className="rounded-full bg-background/60"
+            asChild
+          >
             <Link href="/wallet/withdraw">
               <Landmark />
               Withdraw
             </Link>
           </Button>
-          <Button variant="outline" className="rounded-full bg-background/60" asChild>
+          <Button
+            variant="outline"
+            className="rounded-full bg-background/60"
+            asChild
+          >
             <Link href="/organizations/apply">
               <Building2 />
               Apply as business
             </Link>
           </Button>
-          <Button variant="outline" className="rounded-full bg-background/60" asChild>
+          <Button
+            variant="outline"
+            className="rounded-full bg-background/60"
+            asChild
+          >
             <Link href="/org-invites">
               <Mail />
               Org invites
@@ -543,9 +774,16 @@ export function DashboardOverview() {
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 border-b px-6 py-5">
             <div>
               <CardTitle className="font-semibold">Escrows</CardTitle>
-              <CardDescription>Recent listings you participate in</CardDescription>
+              <CardDescription>
+                Recent listings you participate in
+              </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              asChild
+            >
               <Link href="/escrows">
                 <Handshake />
                 All escrows
@@ -584,9 +822,15 @@ export function DashboardOverview() {
                     ))
                   ) : escrowPreviewRows.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-12 text-muted-foreground" colSpan={4}>
-                        No escrows yet.{' '}
-                        <Link href="/escrows/new" className="font-medium text-accent-foreground underline">
+                      <td
+                        className="px-6 py-12 text-muted-foreground"
+                        colSpan={4}
+                      >
+                        No escrows yet.{" "}
+                        <Link
+                          href="/escrows/new"
+                          className="font-medium text-accent-foreground underline"
+                        >
                           Create one
                         </Link>
                         .
@@ -594,7 +838,7 @@ export function DashboardOverview() {
                     </tr>
                   ) : (
                     escrowPreviewRows.map((row) => {
-                      const st = escrowStatusPresentation(row.status)
+                      const st = escrowStatusPresentation(row.status);
                       return (
                         <EscrowPreviewClickableRow
                           key={row.id}
@@ -602,7 +846,7 @@ export function DashboardOverview() {
                           statusBadgeVariant={st.variant}
                           statusBadgeLabel={st.label}
                         />
-                      )
+                      );
                     })
                   )}
                 </tbody>
@@ -618,7 +862,9 @@ export function DashboardOverview() {
                 <CardTitle className="font-semibold">Notifications</CardTitle>
                 <Bell className="size-4 text-muted-foreground" aria-hidden />
               </div>
-              <CardDescription>Newest inbox items ({notifEnvelope?.total ?? 0})</CardDescription>
+              <CardDescription>
+                Newest inbox items ({notifEnvelope?.total ?? 0})
+              </CardDescription>
             </CardHeader>
             <CardContent className="divide-y px-0 pb-1 pt-0">
               {notificationsQuery.isPending ? (
@@ -631,23 +877,39 @@ export function DashboardOverview() {
                   ))}
                 </div>
               ) : !notifPreview.length ? (
-                <p className="px-6 py-8 text-sm text-muted-foreground">Nothing in inbox yet.</p>
+                <p className="px-6 py-8 text-sm text-muted-foreground">
+                  Nothing in inbox yet.
+                </p>
               ) : (
                 notifPreview.map((n) => (
                   <div key={n.id} className="px-6 py-3">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug">{n.title}</p>
+                      <p className="text-sm font-medium leading-snug">
+                        {n.title}
+                      </p>
                       {!n.is_read ? (
-                        <span className="size-2 shrink-0 rounded-full bg-accent" title="Unread" />
+                        <span
+                          className="size-2 shrink-0 rounded-full bg-accent"
+                          title="Unread"
+                        />
                       ) : null}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{n.body}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">{formatShortDate(n.created_at)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                      {n.body}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {formatShortDate(n.created_at)}
+                    </p>
                   </div>
                 ))
               )}
               <div className="px-6 py-3">
-                <Button variant="ghost" size="sm" className="w-full rounded-full" asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full rounded-full"
+                  asChild
+                >
                   <Link href="/notifications">View all notifications</Link>
                 </Button>
               </div>
@@ -657,7 +919,9 @@ export function DashboardOverview() {
           <Card className="gap-0 py-0 shadow-sm">
             <CardHeader className="border-b px-6 py-5">
               <CardTitle className="font-semibold">Recent activity</CardTitle>
-              <CardDescription>Notifications + recent wallet movements</CardDescription>
+              <CardDescription>
+                Notifications + recent wallet movements
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-6 py-4">
               {showActivitySkeleton ? (
@@ -668,17 +932,25 @@ export function DashboardOverview() {
                 </div>
               ) : activityFeed.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No recent activity. Fund your wallet or accept an escrow to generate entries.
+                  No recent activity. Fund your wallet or accept an escrow to
+                  generate entries.
                 </p>
               ) : (
                 <ul className="space-y-4">
                   {activityFeed.map((item) => (
                     <li key={item.id} className="flex gap-3 text-sm">
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+                      <span
+                        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent"
+                        aria-hidden
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{item.label}</p>
-                        <p className="text-muted-foreground line-clamp-2">{item.detail}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{formatShortDate(item.at)}</p>
+                        <p className="text-muted-foreground line-clamp-2">
+                          {item.detail}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatShortDate(item.at)}
+                        </p>
                         <Link
                           href={item.href}
                           className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent-foreground hover:underline"
@@ -695,5 +967,5 @@ export function DashboardOverview() {
         </div>
       </div>
     </div>
-  )
+  );
 }
