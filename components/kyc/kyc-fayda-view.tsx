@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
@@ -29,6 +30,12 @@ import { Input } from '@/components/ui/input'
 import { ComplianceFlowShell } from '@/components/kyc/compliance-flow-shell'
 import { KycSessionGate } from '@/components/kyc/kyc-session-gate'
 import {
+  extractFaydaTransactionId,
+  fetchFaydaTaskStatus,
+  postFaydaSendOtp,
+  postFaydaVerifyOtp,
+} from '@/lib/kyc/me-kyc-api'
+import {
   kycFaydaSendSchema,
   type KycFaydaSendPayload,
   kycFaydaVerifySchema,
@@ -46,9 +53,13 @@ export function KycFaydaView() {
   )
 }
 
-function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }) {
+function KycFaydaSignedIn({ accessToken }: { accessToken: string }) {
+  const qc = useQueryClient()
   const [phase, setPhase] = useState<'send' | 'verify'>('send')
   const [lastIdentifier, setLastIdentifier] = useState('')
+  const [sendTaskId, setSendTaskId] = useState('')
+  const [verifyTaskId, setVerifyTaskId] = useState('')
+  const [transactionId, setTransactionId] = useState('')
 
   const sendForm = useForm<KycFaydaSendPayload>({
     resolver: zodResolver(kycFaydaSendSchema),
@@ -60,21 +71,98 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
     defaultValues: { code: '' },
   })
 
-  function onSend(values: KycFaydaSendPayload) {
-    setLastIdentifier(values.identifier.trim())
-    setPhase('verify')
+  const sendMutation = useMutation({
+    mutationFn: (values: KycFaydaSendPayload) => postFaydaSendOtp(accessToken, values.identifier.trim()),
+    onSuccess: (data, values) => {
+      setLastIdentifier(values.identifier.trim())
+      setSendTaskId(data.task_id)
+      setVerifyTaskId('')
+      setTransactionId('')
+      setPhase('verify')
+      verifyForm.reset({ code: '' })
+      toast.success('Fayda OTP request queued')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Could not request Fayda OTP')
+    },
+  })
+
+  const sendTaskQuery = useQuery({
+    queryKey: ['me', 'kyc', 'fayda', 'task', sendTaskId],
+    queryFn: () => fetchFaydaTaskStatus(accessToken, sendTaskId),
+    enabled: Boolean(sendTaskId && !transactionId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'SUCCESS' || status === 'FAILURE' ? false : 1500
+    },
+  })
+
+  useEffect(() => {
+    const task = sendTaskQuery.data
+    if (!task) return
+    if (task.status === 'FAILURE') {
+      toast.error(task.error ?? 'Fayda OTP request failed')
+      return
+    }
+    if (task.status !== 'SUCCESS') return
+    const tx = extractFaydaTransactionId(task.result)
+    if (!tx) {
+      toast.error('Fayda did not return a transaction id.')
+      return
+    }
+    setTransactionId(tx)
+    toast.success('OTP sent. Enter the code you received.')
+  }, [sendTaskQuery.data])
+
+  const verifyMutation = useMutation({
+    mutationFn: (values: KycFaydaVerifyPayload) =>
+      postFaydaVerifyOtp(accessToken, {
+        fan_or_fin: lastIdentifier,
+        transaction_id: transactionId,
+        otp: values.code.trim(),
+      }),
+    onSuccess: (data) => {
+      setVerifyTaskId(data.task_id)
+      toast.success('Fayda verification queued')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Could not verify Fayda OTP')
+    },
+  })
+
+  const verifyTaskQuery = useQuery({
+    queryKey: ['me', 'kyc', 'fayda', 'task', verifyTaskId],
+    queryFn: () => fetchFaydaTaskStatus(accessToken, verifyTaskId),
+    enabled: Boolean(verifyTaskId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'SUCCESS' || status === 'FAILURE' ? false : 1500
+    },
+  })
+
+  useEffect(() => {
+    const task = verifyTaskQuery.data
+    if (!task) return
+    if (task.status === 'FAILURE') {
+      toast.error(task.error ?? 'Fayda verification failed')
+      return
+    }
+    if (task.status !== 'SUCCESS') return
+    toast.success('Fayda verification complete')
     verifyForm.reset({ code: '' })
-    toast.message('Code step unlocked', {
-      description:
-        'Fayda messaging is not part of the documented API yet, so no SMS was sent. This step is here so the experience is ready when your backend enables it.',
-    })
+    void qc.invalidateQueries({ queryKey: ['me', 'auth', 'profile'] })
+  }, [qc, verifyForm, verifyTaskQuery.data])
+
+  function onSend(values: KycFaydaSendPayload) {
+    sendMutation.mutate(values)
   }
 
   function onVerify(values: KycFaydaVerifyPayload) {
-    toast.message('Verification captured', {
-      description: `We kept a ${values.code.length}-digit preview only. Hook this step to your production gateway when it is ready.`,
-    })
-    verifyForm.reset({ code: '' })
+    if (!transactionId) {
+      toast.error('Wait for Fayda to return a transaction id before verifying.')
+      return
+    }
+    verifyMutation.mutate(values)
   }
 
   return (
@@ -83,10 +171,9 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
       description="Send a one-time code to a Fayda-linked mobile number or identifier, then confirm the digits you receive."
     >
       <Alert className="mb-8 border-sky-200 bg-sky-50/80 text-sky-950 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
-        <AlertTitle>Preview mode</AlertTitle>
+        <AlertTitle>Live Fayda request</AlertTitle>
         <AlertDescription>
-          The current API reference documents your profile verification state, not the dedicated Fayda messaging service.
-          Nothing leaves this browser until that integration ships.
+          OTP requests are sent through the backend Fayda integration. Keep this tab open while the task updates.
         </AlertDescription>
       </Alert>
 
@@ -131,8 +218,8 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="rounded-full">
-                    Continue to code entry
+                  <Button type="submit" className="rounded-full" disabled={sendMutation.isPending}>
+                    {sendMutation.isPending ? 'Requesting OTP…' : 'Send OTP'}
                   </Button>
                 </form>
               </Form>
@@ -148,6 +235,14 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {!transactionId ? (
+                <Alert className="mb-6">
+                  <AlertTitle>Waiting for Fayda</AlertTitle>
+                  <AlertDescription>
+                    Current task status: {sendTaskQuery.data?.status ?? 'PENDING'}.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               <Form {...verifyForm}>
                 <form onSubmit={verifyForm.handleSubmit(onVerify)} className="space-y-6">
                   <FormField
@@ -171,8 +266,14 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
                     )}
                   />
                   <div className="flex flex-wrap gap-3">
-                    <Button type="submit" className="rounded-full">
-                      Verify (preview)
+                    <Button
+                      type="submit"
+                      className="rounded-full"
+                      disabled={!transactionId || verifyMutation.isPending || verifyTaskQuery.data?.status === 'PENDING'}
+                    >
+                      {verifyMutation.isPending || verifyTaskQuery.data?.status === 'PENDING'
+                        ? 'Verifying…'
+                        : 'Verify OTP'}
                     </Button>
                     <Button
                       type="button"
@@ -180,6 +281,9 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
                       className="rounded-full"
                       onClick={() => {
                         setPhase('send')
+                        setSendTaskId('')
+                        setVerifyTaskId('')
+                        setTransactionId('')
                         verifyForm.reset({ code: '' })
                       }}
                     >
@@ -190,6 +294,7 @@ function KycFaydaSignedIn({ accessToken: _accessToken }: { accessToken: string }
               </Form>
             </CardContent>
             <CardFooter className="text-sm text-muted-foreground">
+              {verifyTaskQuery.data?.status === 'SUCCESS' ? 'Verification complete. ' : null}
               Prefer uploads instead?{' '}
               <Link href="/kyc/manual" className="text-primary underline-offset-4 hover:underline">
                 Switch to manual review

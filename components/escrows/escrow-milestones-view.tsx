@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, CircleDashed, Flag, Package } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +16,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { fetchMeEscrow, fetchMeEscrowMilestones } from '@/lib/escrows/me-escrows-api'
+import { fetchMeEscrow, fetchMeEscrowMilestones, postMeMilestoneAction } from '@/lib/escrows/me-escrows-api'
 import { formatEscrowDate, formatEscrowDateTime, formatEscrowMoney } from '@/lib/escrows/format-escrow'
 import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,7 @@ function milestoneIcon(status: string) {
 export function EscrowMilestonesView({ escrowId }: { escrowId: string }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const e = ethitrustThemeTokens
+  const qc = useQueryClient()
 
   const escrowQuery = useQuery({
     queryKey: ['me', 'escrows', escrowId],
@@ -41,6 +43,22 @@ export function EscrowMilestonesView({ escrowId }: { escrowId: string }) {
     queryKey: ['me', 'escrows', escrowId, 'milestones'],
     queryFn: () => fetchMeEscrowMilestones(accessToken!, escrowId),
     enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
+  })
+
+  const milestoneMutation = useMutation({
+    mutationFn: (vars: { milestoneId: string; action: 'deliver' | 'approve' }) =>
+      postMeMilestoneAction(accessToken!, escrowId, vars.milestoneId, vars.action),
+    onSuccess: async (_row, vars) => {
+      toast.success(vars.action === 'deliver' ? 'Milestone marked delivered' : 'Milestone approved')
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['me', 'escrows'] }),
+        qc.invalidateQueries({ queryKey: ['me', 'escrows', escrowId] }),
+        qc.invalidateQueries({ queryKey: ['me', 'escrows', escrowId, 'milestones'] }),
+      ])
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Milestone action failed')
+    },
   })
 
   if (!accessToken) {
@@ -203,15 +221,29 @@ export function EscrowMilestonesView({ escrowId }: { escrowId: string }) {
                     </dl>
                     <div className="flex flex-wrap gap-2 pt-2">
                       {m.status === 'pending' ? (
-                        <Button type="button" disabled variant="outline" size="sm" className="rounded-full">
+                        <Button
+                          type="button"
+                          disabled={milestoneMutation.isPending}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => milestoneMutation.mutate({ milestoneId: m.id, action: 'deliver' })}
+                        >
                           <Flag />
-                          Mark delivered
+                          {milestoneMutation.isPending ? 'Working…' : 'Mark delivered'}
                         </Button>
                       ) : null}
                       {m.status === 'delivered' ? (
-                        <Button type="button" disabled variant="outline" size="sm" className="rounded-full">
+                        <Button
+                          type="button"
+                          disabled={milestoneMutation.isPending}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => milestoneMutation.mutate({ milestoneId: m.id, action: 'approve' })}
+                        >
                           <CheckCircle2 />
-                          Approve milestone
+                          {milestoneMutation.isPending ? 'Working…' : 'Approve milestone'}
                         </Button>
                       ) : null}
                       {m.status === 'completed' ? (

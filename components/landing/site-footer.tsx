@@ -3,19 +3,43 @@ import Link from "next/link"
 const COLS = [
   {
     title: "Product",
-    links: ["Escrow links", "API & SDKs", "Plug-ins", "Pricing", "Changelog"],
+    links: [
+      { label: "Escrow links", href: "/escrows" },
+      { label: "Wallet", href: "/wallet" },
+      { label: "KYC", href: "/kyc" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "Dashboard", href: "/dashboard" },
+    ],
   },
   {
     title: "Solutions",
-    links: ["Marketplaces", "Wholesale", "Equipment", "Services", "Cross-border"],
+    links: [
+      { label: "Marketplaces", href: "/signup" },
+      { label: "Wholesale", href: "/signup" },
+      { label: "Equipment", href: "/signup" },
+      { label: "Services", href: "/signup" },
+      { label: "Business onboarding", href: "/organizations/apply" },
+    ],
   },
   {
     title: "Company",
-    links: ["About", "Customers", "Security", "Press", "Careers"],
+    links: [
+      { label: "About", href: "/#how-it-works" },
+      { label: "Security", href: "/settings/security" },
+      { label: "Compliance", href: "/kyc" },
+      { label: "Notifications", href: "/notifications" },
+      { label: "Contact", href: "mailto:support@ethitrust.me" },
+    ],
   },
   {
     title: "Resources",
-    links: ["Docs", "Status", "Support", "Compliance", "Contact"],
+    links: [
+      { label: "Support", href: "mailto:support@ethitrust.me" },
+      { label: "Sign in", href: "/signin" },
+      { label: "Create account", href: "/signup" },
+      { label: "Reset password", href: "/forgot-password" },
+      { label: "Organization invites", href: "/org-invites" },
+    ],
   },
 ]
 
@@ -64,12 +88,12 @@ export function SiteFooter() {
                 </p>
                 <ul className="mt-4 space-y-3">
                   {col.links.map((l) => (
-                    <li key={l}>
+                    <li key={l.label}>
                       <Link
-                        href="#"
+                        href={l.href}
                         className="text-sm text-foreground/80 hover:text-foreground"
                       >
-                        {l}
+                        {l.label}
                       </Link>
                     </li>
                   ))}
@@ -82,10 +106,10 @@ export function SiteFooter() {
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <p>© {new Date().getFullYear()} Ethi-Trust. All rights reserved.</p>
           <ul className="flex flex-wrap gap-5">
-            <li><Link href="#" className="hover:text-foreground">Privacy</Link></li>
-            <li><Link href="#" className="hover:text-foreground">Terms</Link></li>
-            <li><Link href="#" className="hover:text-foreground">Licenses</Link></li>
-            <li><Link href="#" className="hover:text-foreground">Disclosures</Link></li>
+            <li><Link href="/settings/security" className="hover:text-foreground">Security</Link></li>
+            <li><Link href="/kyc" className="hover:text-foreground">Compliance</Link></li>
+            <li><Link href="mailto:support@ethitrust.me" className="hover:text-foreground">Support</Link></li>
+            <li><Link href="/signin" className="hover:text-foreground">Account</Link></li>
           </ul>
         </div>
       </div>

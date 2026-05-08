@@ -185,9 +185,7 @@ function Globe() {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={linePositions.length / 3}
-            array={linePositions}
-            itemSize={3}
+            args={[linePositions, 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial
@@ -203,9 +201,7 @@ function Globe() {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={positions.length / 3}
-            array={positions}
-            itemSize={3}
+            args={[positions, 3]}
           />
         </bufferGeometry>
         <pointsMaterial
@@ -222,9 +218,7 @@ function Globe() {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={Math.floor(positions.length / 3 / 8)}
-            array={positions.slice(0, Math.floor(positions.length / 8))}
-            itemSize={3}
+            args={[positions.slice(0, Math.floor(positions.length / 8)), 3]}
           />
         </bufferGeometry>
         <pointsMaterial

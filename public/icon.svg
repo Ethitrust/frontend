@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ethi-Trust">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <path d="M32 13v39M19 22h26M19 22l-7 19h14l-7-19ZM45 22l7 19H38l7-19Z" fill="none" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="13" r="3.5" fill="#22c55e"/>
+</svg>

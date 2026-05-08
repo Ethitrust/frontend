@@ -103,3 +103,71 @@ export async function postInitializeEscrow(accessToken: string, body: unknown): 
   }
   return data as EscrowRow
 }
+
+export type EscrowAction =
+  | 'accept'
+  | 'reject'
+  | 'resend'
+  | 'cancel'
+  | 'submit'
+  | 'complete'
+  | 'review'
+  | 'dispute'
+  | 'counter'
+
+export async function postMeEscrowAction(
+  accessToken: string,
+  escrowId: string,
+  action: EscrowAction,
+  payload?: unknown,
+): Promise<EscrowRow> {
+  const res = await fetch(`/api/me/escrows/${encodeURIComponent(escrowId)}/action`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ action, payload }),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as EscrowRow).id !== 'string') {
+    throw new Error('Unexpected escrow action response.')
+  }
+  return data as EscrowRow
+}
+
+export async function postMeMilestoneAction(
+  accessToken: string,
+  escrowId: string,
+  milestoneId: string,
+  action: 'deliver' | 'approve',
+): Promise<MilestoneRow> {
+  const res = await fetch(
+    `/api/me/escrows/${encodeURIComponent(escrowId)}/milestones/${encodeURIComponent(
+      milestoneId,
+    )}/action`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ action }),
+      cache: 'no-store',
+    },
+  )
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as MilestoneRow).id !== 'string') {
+    throw new Error('Unexpected milestone action response.')
+  }
+  return data as MilestoneRow
+}

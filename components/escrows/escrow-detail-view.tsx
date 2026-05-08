@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Scale,
   Shield,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +32,7 @@ import { fetchAuthMe } from '@/lib/auth/me-session-api'
 import { fetchMeDisputes } from '@/lib/disputes/me-disputes-api'
 import type { EscrowDisputeRow } from '@/lib/disputes/dispute-types'
 import { escrowPartyForViewer } from '@/lib/escrows/escrow-party'
-import { fetchMeEscrow, fetchMeEscrowMilestones } from '@/lib/escrows/me-escrows-api'
+import { fetchMeEscrow, fetchMeEscrowMilestones, postMeEscrowAction, type EscrowAction } from '@/lib/escrows/me-escrows-api'
 import type { EscrowRow, MilestoneRow } from '@/lib/escrows/escrow-list-types'
 import { formatEscrowDate, formatEscrowDateTime, formatEscrowMoney } from '@/lib/escrows/format-escrow'
 import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
@@ -85,6 +86,7 @@ export function EscrowDetailNotFound({ escrowId }: { escrowId: string }) {
 export function EscrowDetailView({ escrowId }: { escrowId: string }) {
   const e = ethitrustThemeTokens
   const accessToken = useAuthStore((s) => s.accessToken)
+  const qc = useQueryClient()
 
   const meQuery = useQuery({
     queryKey: ['me', 'auth', 'me'],
@@ -113,6 +115,23 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
       return row?.id ?? null
     },
     enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
+  })
+
+  const actionMutation = useMutation({
+    mutationFn: (vars: { action: EscrowAction; payload?: unknown }) =>
+      postMeEscrowAction(accessToken!, escrowId, vars.action, vars.payload),
+    onSuccess: async (_row, vars) => {
+      toast.success(statusLabel(vars.action))
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['me', 'escrows'] }),
+        qc.invalidateQueries({ queryKey: ['me', 'escrows', escrowId] }),
+        qc.invalidateQueries({ queryKey: ['me', 'escrows', escrowId, 'milestones'] }),
+        qc.invalidateQueries({ queryKey: ['me', 'disputes'] }),
+      ])
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Action failed')
+    },
   })
 
   if (!accessToken) {
@@ -192,6 +211,7 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
           : 'We could not map your user id onto initiator or receiver yet.'
 
   const deliveryLabel = escrow.delivery_date ? formatEscrowDateTime(escrow.delivery_date) : '—'
+  const acting = actionMutation.isPending
 
   return (
     <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
@@ -449,19 +469,36 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                     Fund wallet
                   </Link>
                 </Button>
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Cancel escrow
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'cancel' })}
+                >
+                  {acting ? 'Working…' : 'Cancel escrow'}
                 </Button>
               </div>
             ) : null}
 
             {escrow.status === 'invited' && party === 'receiver' ? (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" disabled className="rounded-full">
-                  Accept escrow
+                <Button
+                  type="button"
+                  disabled={acting}
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'accept' })}
+                >
+                  {acting ? 'Working…' : 'Accept escrow'}
                 </Button>
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Reject escrow
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'reject' })}
+                >
+                  {acting ? 'Working…' : 'Reject escrow'}
                 </Button>
                 <Button type="button" disabled variant="outline" className="rounded-full">
                   Counter offer
@@ -471,11 +508,23 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
 
             {escrow.status === 'invited' && party === 'initiator' ? (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Resend invitation
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'resend' })}
+                >
+                  {acting ? 'Working…' : 'Resend invitation'}
                 </Button>
-                <Button type="button" disabled variant="destructive" className="rounded-full">
-                  Cancel escrow
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="destructive"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'cancel' })}
+                >
+                  {acting ? 'Working…' : 'Cancel escrow'}
                 </Button>
               </div>
             ) : null}
@@ -487,20 +536,60 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                     <Link href={`/escrows/${encodeURIComponent(escrow.id)}/milestones`}>Milestones</Link>
                   </Button>
                 ) : null}
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Submit delivery
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'submit' })}
+                >
+                  {acting ? 'Working…' : 'Submit delivery'}
                 </Button>
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Review delivery
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() =>
+                    actionMutation.mutate({
+                      action: 'review',
+                      payload: { decision: 'approve', note: 'Approved from escrow detail.' },
+                    })
+                  }
+                >
+                  {acting ? 'Working…' : 'Approve delivery'}
                 </Button>
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Complete escrow
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'complete' })}
+                >
+                  {acting ? 'Working…' : 'Complete escrow'}
                 </Button>
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Cancel escrow
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => actionMutation.mutate({ action: 'cancel' })}
+                >
+                  {acting ? 'Working…' : 'Cancel escrow'}
                 </Button>
-                <Button type="button" disabled variant="outline" className="rounded-full">
-                  Raise dispute
+                <Button
+                  type="button"
+                  disabled={acting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() =>
+                    actionMutation.mutate({
+                      action: 'dispute',
+                      payload: { note: 'Dispute raised from escrow detail.' },
+                    })
+                  }
+                >
+                  {acting ? 'Working…' : 'Raise dispute'}
                 </Button>
               </div>
             ) : null}

@@ -87,6 +87,7 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
     enabled: Boolean(accessToken && walletId),
     placeholderData: (prev) => prev,
   })
+  const txItems = txsQuery.data?.items ?? []
 
   const totalPages = txsQuery.data
     ? Math.max(1, Math.ceil(txsQuery.data.total / Math.max(txsQuery.data.page_size, 1)))
@@ -153,7 +154,7 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                 {txsQuery.error instanceof Error ? txsQuery.error.message : 'Request failed'}
               </AlertDescription>
             </Alert>
-          ) : txsQuery.isPending && !txsQuery.data?.items?.length ? (
+          ) : txsQuery.isPending && txItems.length === 0 ? (
             <Skeleton className="h-64 w-full rounded-xl" />
           ) : (
             <>

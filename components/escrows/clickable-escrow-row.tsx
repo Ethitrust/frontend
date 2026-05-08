@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
-import type { EscrowRow } from '@/lib/escrows/escrow-list-types'
+import type { EscrowListItem, EscrowRow } from '@/lib/escrows/escrow-list-types'
 
 import {
   type EscrowListStatusBadgeVariant,
