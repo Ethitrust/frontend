@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { IdCard, Mail, ScanFace, ShieldCheck } from "lucide-react";
+import { IdCard, Mail, ShieldCheck } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,7 @@ export function KycOverviewView() {
   return (
     <KycSessionGate
       title="Identity verification"
-      description="See how Ethi-Trust interprets your account today, finish email confirmation if needed, and choose Fayda or manual identity checks."
+      description="See your current verification status, finish email confirmation if needed, and submit manual identity documents for review."
     >
       {(accessToken) => <KycOverviewSignedIn accessToken={accessToken} />}
     </KycSessionGate>
@@ -73,8 +73,8 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
           )}
         >
           See the latest verification status from your Ethi-Trust profile,
-          finish email confirmation if needed, and open Fayda or manual flows
-          when you are ready.
+          finish email confirmation if needed, and submit manual documents when
+          review is required.
         </p>
       </header>
 
@@ -197,34 +197,7 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <ScanFace
-                    className="size-4 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <CardTitle className="text-base font-semibold">
-                    National ID · Fayda
-                  </CardTitle>
-                </div>
-                <CardDescription>
-                  Complete one-time codes against Ethiopia’s Fayda-linked
-                  directory when operational teams enable this path.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm leading-relaxed text-muted-foreground">
-                Use Fayda before manual uploads whenever your organization
-                mandates digital checks.
-              </CardContent>
-              <CardFooter>
-                <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/kyc/fayda">Continue with Fayda</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <Card className="shadow-sm">
+            <Card className="shadow-sm lg:col-span-2">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <IdCard
@@ -236,17 +209,17 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
                   </CardTitle>
                 </div>
                 <CardDescription>
-                  Upload government ID portraits when electronic verification
-                  cannot reach your record.
+                  Upload government ID photos and track review status from the
+                  same page.
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-sm leading-relaxed text-muted-foreground">
-                Operators review JPG, PNG, or WEBP uploads when this channel
-                replaces automatic checks.
+                The front of your ID is required. Back-side photos and a selfie
+                are optional but can help reviewers confirm the document faster.
               </CardContent>
               <CardFooter>
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/kyc/manual">Upload documents manually</Link>
+                  <Link href="/kyc/manual">Open manual review</Link>
                 </Button>
               </CardFooter>
             </Card>

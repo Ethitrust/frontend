@@ -10,11 +10,43 @@ async function parseJson(res: Response): Promise<unknown> {
   }
 }
 
+export type ManualKycSubmissionStatus = {
+  submission_id: string
+  status: string
+  rejection_reason: string | null
+  submitted_at: string
+  reviewed_at: string | null
+  front_id_url: string | null
+  back_id_url: string | null
+  selfie_url: string | null
+}
+
+export async function fetchManualKycSubmissionStatus(
+  accessToken: string,
+): Promise<ManualKycSubmissionStatus | null> {
+  const res = await fetch('/api/me/kyc/submissions', {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (res.status === 404) return null
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as ManualKycSubmissionStatus).status !== 'string') {
+    throw new Error('Unexpected KYC status response.')
+  }
+  return data as ManualKycSubmissionStatus
+}
+
 /** Multipart manual KYC → BFF `POST /api/me/kyc/submissions` → `POST /api/v1/kyc/submit` (OpenAPI). */
 export async function postManualKycSubmission(
   accessToken: string,
   formData: FormData,
-): Promise<unknown> {
+): Promise<ManualKycSubmissionStatus> {
   const res = await fetch('/api/me/kyc/submissions', {
     method: 'POST',
     headers: {
@@ -28,7 +60,10 @@ export async function postManualKycSubmission(
   if (!res.ok) {
     throw new Error(getBffErrorMessage(data))
   }
-  return data
+  if (!data || typeof data !== 'object' || typeof (data as ManualKycSubmissionStatus).status !== 'string') {
+    throw new Error('Unexpected KYC submission response.')
+  }
+  return data as ManualKycSubmissionStatus
 }
 
 export type FaydaActionResponse = {
