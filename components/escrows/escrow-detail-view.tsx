@@ -61,6 +61,7 @@ const LIFECYCLE_STEPS = [
   { key: "invited", label: "Invited" },
   { key: "pending_funding", label: "Awaiting Funds" },
   { key: "active", label: "In Progress" },
+  { key: "submitted", label: "Delivered" },
   { key: "completed", label: "Completed" },
 ];
 
@@ -79,6 +80,7 @@ function statusBadgeVariant(status: string) {
   if (status === "completed") return "outline" as const;
   if (status === "invited") return "outline" as const;
   if (status === "pending_funding") return "default" as const;
+  if (status === "submitted" || status === "in_review") return "default" as const;
   return "outline" as const;
 }
 
@@ -542,6 +544,59 @@ function ActionBanner({
         >
           {acting ? "Working…" : "Cancel deal"}
         </Button>
+      </div>
+    );
+  }
+
+  /* Submitted / In Review — buyer ------------------------------------------- */
+  if ((status === "submitted" || status === "in_review") && viewerRole === "Buyer") {
+    return (
+      <div className="flex flex-wrap items-start gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <Shield className="mt-0.5 size-5 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-foreground">
+            Review the delivery
+          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            The seller has submitted the work for your review. Please inspect it carefully before releasing funds.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+            disabled={acting}
+            onClick={() => onAction("complete")}
+          >
+            {acting ? "Working…" : "Approve & release funds"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            disabled={acting}
+            onClick={() => onAction("dispute", { note: "Delivery does not meet requirements" })}
+          >
+            {acting ? "Working…" : "Dispute"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /* Submitted / In Review — seller ------------------------------------------ */
+  if ((status === "submitted" || status === "in_review") && viewerRole === "Seller") {
+    return (
+      <div className="flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/20">
+        <Clock className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+        <div>
+          <p className="font-semibold text-amber-800 dark:text-amber-300">
+            Awaiting buyer review
+          </p>
+          <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
+            You've submitted the work. The buyer is now reviewing it. You'll be notified once they approve or release the funds.
+          </p>
+        </div>
       </div>
     );
   }
