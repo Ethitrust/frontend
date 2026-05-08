@@ -889,44 +889,46 @@ export function DashboardOverview() {
                 Newest inbox items ({notifEnvelope?.total ?? 0})
               </CardDescription>
             </CardHeader>
-            <CardContent className="divide-y px-0 pb-1 pt-0">
-              {notificationsQuery.isPending ? (
-                <div className="space-y-3 px-6 py-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="space-y-2">
-                      <Skeleton className="h-4 w-full max-w-sm rounded" />
-                      <Skeleton className="h-3 w-full rounded" />
-                    </div>
-                  ))}
-                </div>
-              ) : !notifPreview.length ? (
-                <p className="px-6 py-8 text-sm text-muted-foreground">
-                  Nothing in inbox yet.
-                </p>
-              ) : (
-                notifPreview.map((n) => (
-                  <div key={n.id} className="px-6 py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug">
-                        {n.title}
-                      </p>
-                      {!n.is_read ? (
-                        <span
-                          className="size-2 shrink-0 rounded-full bg-accent"
-                          title="Unread"
-                        />
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                      {n.body}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {formatShortDate(n.created_at)}
-                    </p>
+            <CardContent className="flex flex-col px-0 pb-1 pt-0">
+              <div className="divide-y overflow-y-auto overflow-x-hidden max-h-[360px]">
+                {notificationsQuery.isPending ? (
+                  <div className="space-y-3 px-6 py-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-full max-w-sm rounded" />
+                        <Skeleton className="h-3 w-full rounded" />
+                      </div>
+                    ))}
                   </div>
-                ))
-              )}
-              <div className="px-6 py-3">
+                ) : !notifPreview.length ? (
+                  <p className="px-6 py-8 text-sm text-muted-foreground">
+                    Nothing in inbox yet.
+                  </p>
+                ) : (
+                  notifPreview.map((n) => (
+                    <div key={n.id} className="px-6 py-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug">
+                          {n.title}
+                        </p>
+                        {!n.is_read ? (
+                          <span
+                            className="size-2 shrink-0 rounded-full bg-accent"
+                            title="Unread"
+                          />
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                        {n.body}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {formatShortDate(n.created_at)}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="px-6 py-3 border-t">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -946,7 +948,7 @@ export function DashboardOverview() {
                 Notifications + recent wallet movements
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-6 py-4">
+            <CardContent className="px-6 py-4 max-h-[420px] overflow-y-auto overflow-x-hidden">
               {showActivitySkeleton ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
