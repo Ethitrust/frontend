@@ -42,6 +42,7 @@ export async function postOrganizationApply(
     slug: string
     tin: string
     business_license_file_id: string
+    commercial_registration_file_id: string
   },
 ): Promise<OrgApplyResponse> {
   const res = await fetch('/api/me/organizations/apply', {

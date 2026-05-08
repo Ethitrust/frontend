@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { IdCard, Mail, ShieldCheck } from "lucide-react";
+import { IdCard, Mail, ShieldCheck, Fingerprint, Info } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -141,28 +141,30 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
             </Alert>
           )}
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-2 lg:gap-10">
-            <Card className="shadow-sm lg:col-span-2">
-              <CardHeader className="border-b">
-                <CardTitle className="flex flex-wrap items-center gap-3 text-lg font-semibold">
+          <div className="mt-10 flex flex-col gap-8">
+            <Card className="relative overflow-hidden border bg-gradient-to-br from-card to-muted/20 shadow-sm transition-all hover:shadow-md">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+              <CardHeader className="relative border-b bg-muted/10 pb-6 pt-8">
+                <CardTitle className="flex flex-wrap items-center gap-3 text-xl font-semibold tracking-tight">
                   Current verification status
                   <Badge
                     variant={kyc.variant}
-                    className="font-normal capitalize"
+                    className="px-3 py-1 text-xs font-medium uppercase tracking-wider"
                   >
                     {kyc.label}
                   </Badge>
                 </CardTitle>
-                <CardDescription className="text-sm leading-relaxed">
+                <CardDescription className="mt-2 text-base leading-relaxed text-muted-foreground">
                   {kyc.description}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-6 pt-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              <CardContent className="relative grid gap-8 pt-8 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="group">
+                  <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground transition-colors group-hover:text-primary">
+                    <IdCard className="size-3.5" />
                     Legal name
                   </p>
-                  <p className="mt-1 font-medium text-foreground">
+                  <p className="mt-2 text-lg font-medium tracking-tight text-foreground">
                     {[profile.first_name, profile.last_name]
                       .filter(Boolean)
                       .join(" ") ||
@@ -170,72 +172,96 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
                       "Not provided"}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <div className="group">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground transition-colors group-hover:text-primary">
                     Phone on file
                   </p>
-                  <p className="mt-1 font-medium tabular-nums">
+                  <p className="mt-2 text-lg font-medium tabular-nums tracking-tight">
                     {profile.phone_number?.trim() || "Not provided"}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <div className="group">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground transition-colors group-hover:text-primary">
                     Support reference
                   </p>
-                  <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                  <p className="mt-2 break-all font-mono text-sm text-muted-foreground">
                     {profile.id}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <div className="group">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground transition-colors group-hover:text-primary">
                     Last updated
                   </p>
-                  <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+                  <p className="mt-2 text-sm tabular-nums text-muted-foreground">
                     {formatEscrowDateTime(profile.updated_at)}
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm lg:col-span-2">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <IdCard
-                    className="size-4 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <CardTitle className="text-base font-semibold">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="flex flex-col shadow-sm transition-all hover:shadow-md">
+                <CardHeader>
+                  <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-primary/10">
+                    <IdCard className="size-6 text-primary" aria-hidden />
+                  </div>
+                  <CardTitle className="text-lg font-semibold tracking-tight">
                     Manual document review
                   </CardTitle>
-                </div>
-                <CardDescription>
-                  Upload government ID photos and track review status from the
-                  same page.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm leading-relaxed text-muted-foreground">
-                The front of your ID is required. Back-side photos and a selfie
-                are optional but can help reviewers confirm the document faster.
-              </CardContent>
-              <CardFooter>
-                <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/kyc/manual">Open manual review</Link>
-                </Button>
-              </CardFooter>
-            </Card>
+                  <CardDescription className="text-sm">
+                    Upload government ID photos and track review status directly.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 text-sm leading-relaxed text-muted-foreground">
+                  The front of your ID is required. Back-side photos and a selfie
+                  are optional but can help our compliance team verify your documents faster.
+                </CardContent>
+                <CardFooter className="pt-4">
+                  <Button asChild className="w-full rounded-full sm:w-auto" variant="default">
+                    <Link href="/kyc/manual">Open manual review</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
 
-            <Card className="border-dashed bg-muted/40 shadow-none lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">
-                  Reminder
-                </CardTitle>
-                <CardDescription>
-                  Invitation flows may apply their own checks—keep the name and
-                  phone on this screen aligned with what you use when joining an
-                  escrow.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Card className="relative flex flex-col overflow-hidden shadow-sm transition-all hover:shadow-md">
+                <div className="absolute right-0 top-0 translate-x-[30%] translate-y-[-20%] opacity-[0.03] pointer-events-none">
+                  <Fingerprint className="size-64" />
+                </div>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-emerald-500/10">
+                      <Fingerprint className="size-6 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                    </div>
+                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300">
+                      Coming Soon
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-lg font-semibold tracking-tight">
+                    Fayda Integration
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Instant verification with Ethiopia's National ID system.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 text-sm leading-relaxed text-muted-foreground">
+                  We are working closely with national authorities to bring 1-click Fayda integration. 
+                  Soon, you will be able to verify your identity instantly using your Fayda digital ID, skipping manual document uploads.
+                </CardContent>
+                <CardFooter className="pt-4">
+                  <Button disabled variant="outline" className="w-full rounded-full sm:w-auto bg-muted/50 cursor-not-allowed">
+                    Integration pending
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+
+            <Alert className="border-primary/20 bg-primary/5 text-foreground mt-2">
+              <Info className="size-5 text-primary" aria-hidden />
+              <AlertTitle className="font-medium text-primary">Verification reminder</AlertTitle>
+              <AlertDescription className="text-sm leading-relaxed mt-1">
+                Invitation flows may apply their own identity checks. Keep the legal name and phone number on this screen aligned with the details you use when participating in escrows.
+              </AlertDescription>
+            </Alert>
           </div>
         </>
       ) : null}
