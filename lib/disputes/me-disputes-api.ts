@@ -225,7 +225,6 @@ export async function postDisputeEvidence(
       method: "POST",
       headers: {
         Accept: "application/json",
-        "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${accessToken}`,
       },
       body: form,
