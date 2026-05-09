@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
-import { Building, FileText, ShieldCheck, AlertCircle, ArrowLeft, Loader2Icon } from 'lucide-react'
+import { Building, FileText, ShieldCheck, AlertCircle, ArrowLeft, Loader2Icon, Zap } from 'lucide-react'
 import {
   Alert,
   AlertDescription,
@@ -325,6 +325,25 @@ export function AdminOrgApplicationDetailView({
                     <p className="text-[10px] text-muted-foreground">Deny application. Applicant will see your note.</p>
                   </div>
                 </div>
+
+                {row.status === "pending" && (
+                  <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="flex items-start gap-3">
+                      <Zap className="mt-0.5 size-4 text-primary" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-primary">Automated Onboarding</h4>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                          Upon approval, Ethitrust will automatically:
+                        </p>
+                        <ul className="mt-2 list-disc list-inside text-xs text-muted-foreground space-y-1">
+                          <li>Activate the organization profile</li>
+                          <li>Generate a "Default Full Access" API key</li>
+                          <li>Send a welcome email with integration guides</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="oar-note" className="text-sm font-medium">Internal or External Note</Label>

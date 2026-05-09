@@ -8,9 +8,12 @@ import {
   BarChart3,
   GitCompareArrows,
   Handshake,
+  Key,
   Layers,
+  Terminal,
   Timer,
   TrendingUp,
+  Webhook,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -118,6 +121,12 @@ export function OrgDashboardView({ orgId }: { orgId: string }) {
             <ArrowRight className="size-4" />
           </Link>
         </Button>
+        <Button variant="outline" className="rounded-full" asChild>
+          <Link href={`/org/${orgId}/settings`}>
+            <Terminal className="size-4" />
+            Developer Hub
+          </Link>
+        </Button>
       </div>
 
       {reportQuery.isPending ? (
@@ -212,6 +221,56 @@ export function OrgDashboardView({ orgId }: { orgId: string }) {
               </p>
             </CardContent>
           </Card>
+
+          <div className="mt-12">
+            <h2 className="text-xl font-semibold">Escrow as a Service (EaaS)</h2>
+            <p className="text-muted-foreground mt-1">Integrate Ethitrust escrow directly into your platform.</p>
+            
+            <div className="mt-6 grid gap-6 md:grid-cols-3">
+              <Card className="bg-primary/5 border-primary/10 shadow-none">
+                <CardHeader>
+                  <Key className="size-6 text-primary mb-2" />
+                  <CardTitle className="text-base">API Keys</CardTitle>
+                  <CardDescription>Authenticate your backend requests with secure, scoped keys.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="link" className="p-0 h-auto gap-2" asChild>
+                    <Link href={`/org/${orgId}/settings`}>
+                      Manage keys <ArrowRight className="size-3" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-primary/5 border-primary/10 shadow-none">
+                <CardHeader>
+                  <Webhook className="size-6 text-primary mb-2" />
+                  <CardTitle className="text-base">Webhooks</CardTitle>
+                  <CardDescription>Receive real-time updates when escrow states change.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="link" className="p-0 h-auto gap-2" asChild>
+                    <Link href={`/org/${orgId}/settings`}>
+                      Configure webhooks <ArrowRight className="size-3" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-primary/5 border-primary/10 shadow-none">
+                <CardHeader>
+                  <Terminal className="size-6 text-primary mb-2" />
+                  <CardTitle className="text-base">API Reference</CardTitle>
+                  <CardDescription>Explore our developer documentation and integration guides.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="link" className="p-0 h-auto gap-2" disabled>
+                    Coming Soon <ArrowRight className="size-3" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
           <Card className="mt-6 shadow-sm">
             <CardHeader className="border-b">
