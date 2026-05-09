@@ -985,7 +985,7 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
   const escrow = escrowQuery.data as EscrowRow;
   const viewerId = meQuery.data?.id ?? "";
   const viewerEmail = meQuery.data?.email ?? "";
-  const party = escrowPartyForViewer(escrow, viewerId ? viewerId : viewerEmail);
+  const party = escrowPartyForViewer(escrow, viewerId, viewerEmail);
   const milestones = milestonesQuery.data ?? [];
   const myRole = viewerRoleLabel(party, escrow.initiator_role);
   const counterpartyDisplay =
