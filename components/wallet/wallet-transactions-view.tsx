@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -22,31 +22,40 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { WalletFlowShell } from '@/components/wallet/wallet-flow-shell'
-import { WalletPaymentsGate } from '@/components/wallet/wallet-payments-gate'
-import { formatEscrowDateTime, formatEscrowMoney } from '@/lib/escrows/format-escrow'
+} from "@/components/ui/table";
+import { WalletFlowShell } from "@/components/wallet/wallet-flow-shell";
+import { WalletPaymentsGate } from "@/components/wallet/wallet-payments-gate";
+import {
+  formatEscrowDateTime,
+  formatEscrowMoney,
+} from "@/lib/escrows/format-escrow";
 import {
   fetchMeWalletList,
   fetchMeWalletTransactions,
   pickDefaultWalletId,
-} from '@/lib/wallets/me-wallet-api'
-import type { WalletRow } from '@/lib/wallets/wallet-types'
-import { cn } from '@/lib/utils'
+  reconcileWalletTransaction,
+} from "@/lib/wallets/me-wallet-api";
+import type { WalletRow } from "@/lib/wallets/wallet-types";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 20;
 
 function transactionLabel(type: string) {
-  const t = type.replace(/_/g, ' ')
-  return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : type
+  const t = type.replace(/_/g, " ");
+  return t.length > 0 ? t.charAt(0).toUpperCase() + t.slice(1) : type;
 }
 
-function txnStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-  const s = status.toLowerCase()
-  if (s === 'completed' || s === 'success' || s === 'successful') return 'secondary'
-  if (s === 'failed' || s === 'rejected' || s === 'cancelled') return 'destructive'
-  if (s === 'pending') return 'outline'
-  return 'default'
+function txnStatusVariant(
+  status: string,
+): "default" | "secondary" | "destructive" | "outline" {
+  const s = status.toLowerCase();
+  if (s === "completed" || s === "success" || s === "successful")
+    return "secondary";
+  if (s === "failed" || s === "rejected" || s === "cancelled")
+    return "destructive";
+  if (s === "pending") return "outline";
+  return "default";
 }
 
 export function WalletTransactionsView() {
@@ -55,50 +64,69 @@ export function WalletTransactionsView() {
       title="Transaction history"
       description="Review deposits, withdrawals, escrow movements, and other entries. Switch wallets if you use more than one currency."
     >
-      {(accessToken) => <WalletTransactionsSignedIn accessToken={accessToken} />}
+      {(accessToken) => (
+        <WalletTransactionsSignedIn accessToken={accessToken} />
+      )}
     </WalletPaymentsGate>
-  )
+  );
 }
 
 function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
-  const [walletId, setWalletId] = useState('')
-  const [page, setPage] = useState(1)
+  const [walletId, setWalletId] = useState("");
+  const [page, setPage] = useState(1);
 
   const walletsQuery = useQuery({
-    queryKey: ['me', 'wallets'],
+    queryKey: ["me", "wallets"],
     queryFn: () => fetchMeWalletList(accessToken),
     enabled: Boolean(accessToken),
-  })
+  });
 
   useEffect(() => {
-    const list = walletsQuery.data
-    if (!list?.length || walletId) return
-    const id = pickDefaultWalletId(list)
-    if (id) setWalletId(id)
-  }, [walletsQuery.data, walletId])
+    const list = walletsQuery.data;
+    if (!list?.length || walletId) return;
+    const id = pickDefaultWalletId(list);
+    if (id) setWalletId(id);
+  }, [walletsQuery.data, walletId]);
 
   useEffect(() => {
-    setPage(1)
-  }, [walletId])
+    setPage(1);
+  }, [walletId]);
 
   const txsQuery = useQuery({
-    queryKey: ['me', 'wallets', walletId, 'transactions', page, PAGE_SIZE],
-    queryFn: () => fetchMeWalletTransactions(accessToken, walletId, page, PAGE_SIZE),
+    queryKey: ["me", "wallets", walletId, "transactions", page, PAGE_SIZE],
+    queryFn: () =>
+      fetchMeWalletTransactions(accessToken, walletId, page, PAGE_SIZE),
     enabled: Boolean(accessToken && walletId),
     placeholderData: (prev) => prev,
-  })
-  const txItems = txsQuery.data?.items ?? []
+  });
+
+  const reconcileMutation = useMutation({
+    mutationFn: (transactionId: string) =>
+      reconcileWalletTransaction(accessToken, walletId, transactionId),
+    onSuccess: () => {
+      toast.success("Transaction reconciled");
+      txsQuery.refetch();
+    },
+  });
+
+  const txItems = txsQuery.data?.items ?? [];
 
   const totalPages = txsQuery.data
-    ? Math.max(1, Math.ceil(txsQuery.data.total / Math.max(txsQuery.data.page_size, 1)))
-    : 1
+    ? Math.max(
+        1,
+        Math.ceil(txsQuery.data.total / Math.max(txsQuery.data.page_size, 1)),
+      )
+    : 1;
   const spanStart =
     txsQuery.data && txsQuery.data.total > 0
       ? (txsQuery.data.page - 1) * txsQuery.data.page_size + 1
-      : 0
+      : 0;
   const spanEnd = txsQuery.data
-    ? Math.min(txsQuery.data.page * txsQuery.data.page_size, txsQuery.data.total)
-    : 0
+    ? Math.min(
+        txsQuery.data.page * txsQuery.data.page_size,
+        txsQuery.data.total,
+      )
+    : 0;
 
   return (
     <WalletFlowShell
@@ -112,24 +140,34 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
         <Alert variant="destructive">
           <AlertTitle>Could not load wallets</AlertTitle>
           <AlertDescription>
-            {walletsQuery.error instanceof Error ? walletsQuery.error.message : 'Request failed'}
+            {walletsQuery.error instanceof Error
+              ? walletsQuery.error.message
+              : "Request failed"}
           </AlertDescription>
         </Alert>
       ) : !walletsQuery.data?.length ? (
         <Alert>
           <AlertTitle>No wallets</AlertTitle>
-          <AlertDescription>There are no wallets to show history for.</AlertDescription>
+          <AlertDescription>
+            There are no wallets to show history for.
+          </AlertDescription>
         </Alert>
       ) : (
         <div className="space-y-6">
           {walletsQuery.data.length > 1 ? (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="tx-wallet-select">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="tx-wallet-select"
+                >
                   Wallet
                 </label>
                 <Select value={walletId} onValueChange={setWalletId}>
-                  <SelectTrigger id="tx-wallet-select" className="w-full rounded-lg sm:w-72">
+                  <SelectTrigger
+                    id="tx-wallet-select"
+                    className="w-full rounded-lg sm:w-72"
+                  >
                     <SelectValue placeholder="Select wallet" />
                   </SelectTrigger>
                   <SelectContent>
@@ -141,7 +179,12 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" size="sm" className="rounded-full sm:mb-[2px]" asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full sm:mb-[2px]"
+                asChild
+              >
                 <Link href="/wallet">Overview</Link>
               </Button>
             </div>
@@ -151,7 +194,9 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
             <Alert variant="destructive">
               <AlertTitle>Could not load transactions</AlertTitle>
               <AlertDescription>
-                {txsQuery.error instanceof Error ? txsQuery.error.message : 'Request failed'}
+                {txsQuery.error instanceof Error
+                  ? txsQuery.error.message
+                  : "Request failed"}
               </AlertDescription>
             </Alert>
           ) : txsQuery.isPending && txItems.length === 0 ? (
@@ -165,7 +210,9 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                       <TableHead className="min-w-[8rem]">When</TableHead>
                       <TableHead className="min-w-[9rem]">Type</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">
+                        Amount
+                      </TableHead>
                       <TableHead className="min-w-[7rem]">Status</TableHead>
                       <TableHead className="min-w-[5rem]" />
                     </TableRow>
@@ -176,10 +223,12 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                         <TableCell className="align-top text-xs tabular-nums text-muted-foreground whitespace-nowrap">
                           {formatEscrowDateTime(row.created_at)}
                         </TableCell>
-                        <TableCell className="align-top text-sm">{transactionLabel(row.type)}</TableCell>
+                        <TableCell className="align-top text-sm">
+                          {transactionLabel(row.type)}
+                        </TableCell>
                         <TableCell className="max-w-[18rem] align-top">
                           <p className="line-clamp-2 text-xs text-muted-foreground">
-                            {row.description || row.reference || '—'}
+                            {row.description || row.reference || "—"}
                           </p>
                           {row.provider ? (
                             <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
@@ -187,15 +236,16 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                             </p>
                           ) : null}
                         </TableCell>
-                        <TableCell
-                          className={cnAmt(row.amount)}
-                        >
-                          {row.amount >= 0 ? '+' : ''}
+                        <TableCell className={cnAmt(row.amount)}>
+                          {row.amount >= 0 ? "+" : ""}
                           {formatEscrowMoney(row.amount, row.currency)}
                         </TableCell>
                         <TableCell className="align-top">
-                          <Badge variant={txnStatusVariant(row.status)} className="font-normal capitalize">
-                            {row.status.replace(/_/g, ' ')}
+                          <Badge
+                            variant={txnStatusVariant(row.status)}
+                            className="font-normal capitalize"
+                          >
+                            {row.status.replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
                         <TableCell className="align-top">
@@ -207,6 +257,17 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                               Escrow
                             </Link>
                           ) : null}
+                          {row.status === "pending" ? (
+                            <Button
+                              variant={"default"}
+                              size="sm"
+                              className="ml-2 rounded-full"
+                              type="button"
+                              onClick={() => reconcileMutation.mutate(row.id)}
+                            >
+                              Reconcile
+                            </Button>
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -215,13 +276,15 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
               </div>
 
               {txsQuery.data && txsQuery.data.total === 0 ? (
-                <p className="text-sm text-muted-foreground">No transactions for this wallet yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No transactions for this wallet yet.
+                </p>
               ) : txsQuery.data ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-6 text-sm">
                   <p className="text-muted-foreground">
                     {txsQuery.data.total > 0
                       ? `Showing ${spanStart}–${spanEnd} of ${txsQuery.data.total}`
-                      : ''}
+                      : ""}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -255,12 +318,12 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
         </div>
       )}
     </WalletFlowShell>
-  )
+  );
 }
 
 function cnAmt(amount: number) {
   return cn(
-    'text-right align-top text-sm tabular-nums font-medium whitespace-nowrap',
-    amount >= 0 && 'text-emerald-700 dark:text-emerald-400',
-  )
+    "text-right align-top text-sm tabular-nums font-medium whitespace-nowrap",
+    amount >= 0 && "text-emerald-700 dark:text-emerald-400",
+  );
 }
