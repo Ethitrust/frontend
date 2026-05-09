@@ -94,8 +94,10 @@ function statusBadgeVariant(status: string) {
   if (status === "active") return "secondary" as const;
   if (status === "completed") return "outline" as const;
   if (status === "invited") return "outline" as const;
-  if (status === "pending_funding" || status === "pending") return "default" as const;
-  if (status === "submitted" || status === "in_review") return "default" as const;
+  if (status === "pending_funding" || status === "pending")
+    return "default" as const;
+  if (status === "submitted" || status === "in_review")
+    return "default" as const;
   return "outline" as const;
 }
 
@@ -168,7 +170,7 @@ function StatusTimeline({ status }: { status: string }) {
   let timelineStatus = status;
   if (timelineStatus === "pending") timelineStatus = "pending_funding";
   if (timelineStatus === "in_review") timelineStatus = "submitted";
-  
+
   const currentIdx = getLifecycleIndex(timelineStatus);
 
   if (isTerminal) {
@@ -434,7 +436,10 @@ function ActionBanner({
   }
 
   /* Pending funding — buyer ------------------------------------------------- */
-  if ((status === "pending_funding" || status === "pending") && viewerRole === "Buyer") {
+  if (
+    (status === "pending_funding" || status === "pending") &&
+    viewerRole === "Buyer"
+  ) {
     return (
       <div className="flex flex-wrap items-start gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
         <Landmark className="mt-0.5 size-5 shrink-0 text-primary" />
@@ -469,7 +474,10 @@ function ActionBanner({
   }
 
   /* Pending funding — seller ------------------------------------------------ */
-  if ((status === "pending_funding" || status === "pending") && viewerRole === "Seller") {
+  if (
+    (status === "pending_funding" || status === "pending") &&
+    viewerRole === "Seller"
+  ) {
     return (
       <div className="flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/20">
         <Clock className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -568,7 +576,10 @@ function ActionBanner({
   }
 
   /* Submitted / In Review — buyer ------------------------------------------- */
-  if ((status === "submitted" || status === "in_review") && viewerRole === "Buyer") {
+  if (
+    (status === "submitted" || status === "in_review") &&
+    viewerRole === "Buyer"
+  ) {
     return (
       <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-sm ring-1 ring-primary/5">
         <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-inner">
@@ -579,7 +590,8 @@ function ActionBanner({
             Review the delivery
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            The seller has submitted the work. Inspect everything carefully before releasing the funds.
+            The seller has submitted the work. Inspect everything carefully
+            before releasing the funds.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -596,7 +608,9 @@ function ActionBanner({
             variant="outline"
             className="h-11 rounded-full border-amber-200 bg-white px-6 text-amber-800 shadow-sm transition-all hover:bg-amber-50 hover:text-amber-900 dark:border-amber-800 dark:bg-background dark:text-amber-400 dark:hover:bg-amber-950/30"
             disabled={acting}
-            onClick={() => onAction("review", { decision: "request_changes_modal" })}
+            onClick={() =>
+              onAction("review", { decision: "request_changes_modal" })
+            }
           >
             {acting ? "Processing…" : "Request changes"}
           </Button>
@@ -615,7 +629,10 @@ function ActionBanner({
   }
 
   /* Submitted / In Review — seller ------------------------------------------ */
-  if ((status === "submitted" || status === "in_review") && viewerRole === "Seller") {
+  if (
+    (status === "submitted" || status === "in_review") &&
+    viewerRole === "Seller"
+  ) {
     return (
       <div className="flex items-center gap-6 rounded-2xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/10">
         <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 shadow-inner dark:bg-amber-900/20 dark:text-amber-400">
@@ -626,7 +643,9 @@ function ActionBanner({
             Awaiting buyer review
           </p>
           <p className="mt-1 text-sm leading-relaxed text-amber-800/80 dark:text-amber-400/80">
-            You've submitted the work. The buyer is now reviewing your delivery. You'll be notified immediately once they approve or request revisions.
+            You've submitted the work. The buyer is now reviewing your delivery.
+            You'll be notified immediately once they approve or request
+            revisions.
           </p>
         </div>
       </div>
@@ -965,7 +984,8 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
 
   const escrow = escrowQuery.data as EscrowRow;
   const viewerId = meQuery.data?.id ?? "";
-  const party = escrowPartyForViewer(escrow, viewerId);
+  const viewerEmail = meQuery.data?.email ?? "";
+  const party = escrowPartyForViewer(escrow, viewerId ? viewerId : viewerEmail);
   const milestones = milestonesQuery.data ?? [];
   const myRole = viewerRoleLabel(party, escrow.initiator_role);
   const counterpartyDisplay =
