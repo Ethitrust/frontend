@@ -14,8 +14,10 @@ import {
   Handshake,
   Landmark,
   Mail,
+  MessageSquare,
   Scale,
   Shield,
+  ShieldAlert,
   TrendingUp,
   XCircle,
 } from "lucide-react";
@@ -34,6 +36,16 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { fetchAuthMe } from "@/lib/auth/me-session-api";
 import { fetchMeDisputes } from "@/lib/disputes/me-disputes-api";
 import type { EscrowDisputeRow } from "@/lib/disputes/dispute-types";
@@ -68,7 +80,10 @@ const LIFECYCLE_STEPS = [
 const TERMINAL_STATUSES = ["cancelled", "rejected", "disputed"];
 
 function getLifecycleIndex(status: string): number {
-  return LIFECYCLE_STEPS.findIndex((s) => s.key === status);
+  let s = status;
+  if (s === "pending") s = "pending_funding";
+  if (s === "in_review") s = "submitted";
+  return LIFECYCLE_STEPS.findIndex((step) => step.key === s);
 }
 
 function statusLabel(status: string) {
@@ -79,7 +94,7 @@ function statusBadgeVariant(status: string) {
   if (status === "active") return "secondary" as const;
   if (status === "completed") return "outline" as const;
   if (status === "invited") return "outline" as const;
-  if (status === "pending_funding") return "default" as const;
+  if (status === "pending_funding" || status === "pending") return "default" as const;
   if (status === "submitted" || status === "in_review") return "default" as const;
   return "outline" as const;
 }
@@ -150,7 +165,11 @@ export function EscrowDetailNotFound({ escrowId }: { escrowId: string }) {
 
 function StatusTimeline({ status }: { status: string }) {
   const isTerminal = TERMINAL_STATUSES.includes(status);
-  const currentIdx = getLifecycleIndex(status);
+  let timelineStatus = status;
+  if (timelineStatus === "pending") timelineStatus = "pending_funding";
+  if (timelineStatus === "in_review") timelineStatus = "submitted";
+  
+  const currentIdx = getLifecycleIndex(timelineStatus);
 
   if (isTerminal) {
     return (
@@ -415,7 +434,7 @@ function ActionBanner({
   }
 
   /* Pending funding — buyer ------------------------------------------------- */
-  if (status === "pending_funding" && viewerRole === "Buyer") {
+  if ((status === "pending_funding" || status === "pending") && viewerRole === "Buyer") {
     return (
       <div className="flex flex-wrap items-start gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
         <Landmark className="mt-0.5 size-5 shrink-0 text-primary" />
@@ -450,7 +469,7 @@ function ActionBanner({
   }
 
   /* Pending funding — seller ------------------------------------------------ */
-  if (status === "pending_funding" && viewerRole === "Seller") {
+  if ((status === "pending_funding" || status === "pending") && viewerRole === "Seller") {
     return (
       <div className="flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/20">
         <Clock className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -551,33 +570,44 @@ function ActionBanner({
   /* Submitted / In Review — buyer ------------------------------------------- */
   if ((status === "submitted" || status === "in_review") && viewerRole === "Buyer") {
     return (
-      <div className="flex flex-wrap items-start gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
-        <Shield className="mt-0.5 size-5 shrink-0 text-primary" />
+      <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-sm ring-1 ring-primary/5">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-inner">
+          <Shield className="size-6" />
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-foreground">
+          <p className="text-lg font-semibold tracking-tight text-foreground">
             Review the delivery
           </p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            The seller has submitted the work for your review. Please inspect it carefully before releasing funds.
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            The seller has submitted the work. Inspect everything carefully before releasing the funds.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
-            size="sm"
-            className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+            size="lg"
+            className="h-11 rounded-full bg-emerald-600 px-6 text-white shadow-md transition-all hover:bg-emerald-700 hover:shadow-lg active:scale-95"
             disabled={acting}
-            onClick={() => onAction("complete")}
+            onClick={() => onAction("review", { decision: "approve" })}
           >
-            {acting ? "Working…" : "Approve & release funds"}
+            {acting ? "Processing…" : "Approve & release"}
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-11 rounded-full border-amber-200 bg-white px-6 text-amber-800 shadow-sm transition-all hover:bg-amber-50 hover:text-amber-900 dark:border-amber-800 dark:bg-background dark:text-amber-400 dark:hover:bg-amber-950/30"
+            disabled={acting}
+            onClick={() => onAction("review", { decision: "request_changes_modal" })}
+          >
+            {acting ? "Processing…" : "Request changes"}
           </Button>
           <Button
             size="sm"
-            variant="outline"
-            className="rounded-full"
+            variant="ghost"
+            className="h-11 rounded-full px-4 text-destructive hover:bg-destructive/10 hover:text-destructive"
             disabled={acting}
-            onClick={() => onAction("dispute", { note: "Delivery does not meet requirements" })}
+            onClick={() => onAction("review", { decision: "dispute_modal" })}
           >
-            {acting ? "Working…" : "Dispute"}
+            {acting ? "Processing…" : "Raise dispute"}
           </Button>
         </div>
       </div>
@@ -587,14 +617,16 @@ function ActionBanner({
   /* Submitted / In Review — seller ------------------------------------------ */
   if ((status === "submitted" || status === "in_review") && viewerRole === "Seller") {
     return (
-      <div className="flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/20">
-        <Clock className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="flex items-center gap-6 rounded-2xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/10">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 shadow-inner dark:bg-amber-900/20 dark:text-amber-400">
+          <Clock className="size-6" />
+        </div>
         <div>
-          <p className="font-semibold text-amber-800 dark:text-amber-300">
+          <p className="text-lg font-semibold tracking-tight text-amber-900 dark:text-amber-300">
             Awaiting buyer review
           </p>
-          <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-400">
-            You've submitted the work. The buyer is now reviewing it. You'll be notified once they approve or release the funds.
+          <p className="mt-1 text-sm leading-relaxed text-amber-800/80 dark:text-amber-400/80">
+            You've submitted the work. The buyer is now reviewing your delivery. You'll be notified immediately once they approve or request revisions.
           </p>
         </div>
       </div>
@@ -772,6 +804,12 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
 
+  const [reviewModal, setReviewModal] = useState<{
+    open: boolean;
+    type: "request_changes" | "dispute";
+    note: string;
+  }>({ open: false, type: "request_changes", note: "" });
+
   const meQuery = useQuery({
     queryKey: ["me", "auth", "me"],
     queryFn: () => fetchAuthMe(accessToken!),
@@ -938,8 +976,28 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
     : "—";
   const acting = actionMutation.isPending;
 
-  function handleAction(action: EscrowAction, payload?: unknown) {
+  function handleAction(action: EscrowAction, payload?: any) {
+    if (payload?.decision === "request_changes_modal") {
+      setReviewModal({ open: true, type: "request_changes", note: "" });
+      return;
+    }
+    if (payload?.decision === "dispute_modal") {
+      setReviewModal({ open: true, type: "dispute", note: "" });
+      return;
+    }
     actionMutation.mutate({ action, payload });
+  }
+
+  function handleReviewSubmit() {
+    if (!reviewModal.note.trim()) {
+      toast.error("Please provide a note for this action.");
+      return;
+    }
+    actionMutation.mutate({
+      action: "review",
+      payload: { decision: reviewModal.type, note: reviewModal.note },
+    });
+    setReviewModal({ ...reviewModal, open: false });
   }
 
   function handleMilestoneAction(
@@ -1028,6 +1086,74 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
           acting={acting}
           onAction={handleAction}
         />
+
+        {/* Review Modal */}
+        <Dialog
+          open={reviewModal.open}
+          onOpenChange={(open) => setReviewModal({ ...reviewModal, open })}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {reviewModal.type === "request_changes" ? (
+                  <>
+                    <MessageSquare className="size-5 text-amber-500" />
+                    Request changes
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="size-5 text-destructive" />
+                    Raise dispute
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                {reviewModal.type === "request_changes"
+                  ? "Provide details on what needs to be revised by the seller."
+                  : "Explain the reason for the dispute. A platform resolution agent will review the case."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="review-note">Your feedback</Label>
+                <Textarea
+                  id="review-note"
+                  placeholder={
+                    reviewModal.type === "request_changes"
+                      ? "e.g. Please update the logo size and fix the alignment..."
+                      : "e.g. The work submitted does not match the agreement..."
+                  }
+                  className="min-h-32 resize-none"
+                  value={reviewModal.note}
+                  onChange={(e) =>
+                    setReviewModal({ ...reviewModal, note: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setReviewModal({ ...reviewModal, open: false })}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={
+                  reviewModal.type === "dispute" ? "destructive" : "default"
+                }
+                disabled={acting}
+                onClick={handleReviewSubmit}
+              >
+                {acting
+                  ? "Submitting..."
+                  : reviewModal.type === "request_changes"
+                    ? "Submit feedback"
+                    : "Raise dispute"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Dispute alert — only when dispute exists but escrow isn't in 'disputed' state */}
         {disputeLinkQuery.data && escrow.status !== "disputed" ? (
