@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Eye, EyeOff, Save, TestTube } from "lucide-react";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { patchOrgProfile } from "@/lib/org/org-organizations-api";
 import { postOrgWebhookTest } from "@/lib/org-escrows/org-escrows-api";
 import type { OrganizationProfileRow } from "@/lib/organizations/organization-types";
 import { useAuthStore } from "@/stores/auth-store";
@@ -22,14 +21,45 @@ export function OrgWebhookConfig({
 }) {
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [url, setUrl] = useState(profile.webhook_url || "");
-  const [secret, setSecret] = useState(profile.webhook_secret || "");
+  const [url, setUrl] = useState("");
+  const [secret, setSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [savedUrl, setSavedUrl] = useState("");
+  const [savedSecret, setSavedSecret] = useState("");
+
+  // Sync state when profile loads/changes from the server
+  useEffect(() => {
+    const remoteUrl = profile.webhook_url ?? "";
+    const remoteSecret = profile.webhook_secret ?? "";
+    setUrl(remoteUrl);
+    setSecret(remoteSecret);
+    setSavedUrl(remoteUrl);
+    setSavedSecret(remoteSecret);
+  }, [profile.webhook_url, profile.webhook_secret]);
+
 
   const saveMutation = useMutation({
-    mutationFn: () => patchOrgProfile(accessToken!, orgId, { webhook_url: url, webhook_secret: secret }),
+    mutationFn: async () => {
+      const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/profile`, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ webhook_url: url || null, webhook_secret: secret || null }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error((data as {detail?: string})?.detail ?? `Save failed (${res.status})`);
+      }
+      return res.json();
+    },
     onSuccess: () => {
       toast.success("Webhook settings saved");
+      setSavedUrl(url);
+      setSavedSecret(secret);
       void queryClient.invalidateQueries({ queryKey: ["me", "organizations", orgId, "profile"] });
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Could not save webhooks"),
@@ -87,14 +117,14 @@ export function OrgWebhookConfig({
             <Button
               variant="secondary"
               onClick={() => testMutation.mutate()}
-              disabled={!url || testMutation.isPending || saveMutation.isPending || url !== profile.webhook_url}
-              title={url !== profile.webhook_url ? "Save before testing" : "Send a test ping"}
+              disabled={!savedUrl || testMutation.isPending || saveMutation.isPending || url !== savedUrl}
+              title={url !== savedUrl ? "Save before testing" : "Send a test ping"}
             >
               {testMutation.isPending ? "Pinging..." : <><TestTube className="size-4 mr-2" /> Ping</>}
             </Button>
           </div>
-          {url !== profile.webhook_url && (
-            <p className="text-xs text-muted-foreground mt-1 text-orange-500">Unsaved changes</p>
+          {url !== savedUrl && (
+            <p className="text-xs text-orange-500 mt-1">Unsaved changes — click Save Settings</p>
           )}
         </div>
 
@@ -134,8 +164,8 @@ export function OrgWebhookConfig({
               {secret ? "Regenerate" : "Generate"}
             </Button>
           </div>
-          {secret !== profile.webhook_secret && (
-            <p className="text-xs text-muted-foreground mt-1 text-orange-500">Unsaved secret changes</p>
+          {secret !== savedSecret && (
+            <p className="text-xs text-orange-500 mt-1">Unsaved secret — click Save Settings</p>
           )}
         </div>
         
@@ -156,7 +186,7 @@ export function OrgWebhookConfig({
       <CardFooter className="border-t bg-muted/20 px-6 py-4 flex justify-end">
         <Button 
           onClick={() => saveMutation.mutate()} 
-          disabled={saveMutation.isPending || (url === profile.webhook_url && secret === profile.webhook_secret)}
+          disabled={saveMutation.isPending || (url === savedUrl && secret === savedSecret)}
         >
           {saveMutation.isPending ? "Saving..." : <><Save className="size-4 mr-2" /> Save Settings</>}
         </Button>
