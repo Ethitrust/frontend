@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { MenuIcon, UserIcon } from 'lucide-react'
 
 import { AdminSidebarNav } from '@/components/admin/admin-sidebar-nav'
+import { ModeratorSidebarNav } from '@/components/moderator/moderator-sidebar-nav'
 import { WorkspaceSidebarLogout } from '@/components/dashboard/workspace-sidebar-logout'
 import { UserNotificationsNavPopover } from '@/components/notifications/user-notifications-nav-popover'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -29,6 +30,9 @@ function WorkspaceSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() ?? ''
   if (pathname.startsWith('/admin')) {
     return <AdminSidebarNav onNavigate={onNavigate} />
+  }
+  if (pathname.startsWith('/moderator')) {
+    return <ModeratorSidebarNav onNavigate={onNavigate} />
   }
   return <UserWorkspaceNavBody onNavigate={onNavigate} />
 }
@@ -87,10 +91,13 @@ function UserWorkspaceNavBody({ onNavigate }: { onNavigate?: () => void }) {
 export function UserWorkspaceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? ''
   const adminMode = pathname.startsWith('/admin')
+  const moderatorMode = pathname.startsWith('/moderator')
+  const operatorMode = adminMode || moderatorMode
   const { layout, typography, brand, surfaces, controls } = ethitrustThemeTokens
 
-  const brandHref = adminMode ? '/admin' : '/dashboard'
-  const sidebarLabel = adminMode ? 'Admin workspace sidebar' : 'Workspace sidebar'
+  const brandHref = adminMode ? '/admin' : moderatorMode ? '/moderator' : '/dashboard'
+  const sidebarLabel = operatorMode ? 'Operator workspace sidebar' : 'Workspace sidebar'
+  const consoleLabel = adminMode ? 'Operator console' : moderatorMode ? 'Moderator console' : null
 
   return (
     <div className={cn(layout.page, 'grain flex min-h-screen flex-col')}>
@@ -109,9 +116,9 @@ export function UserWorkspaceLayout({ children }: { children: React.ReactNode })
               <SheetHeader>
                 <SheetTitle className="text-left font-serif text-lg">
                   <span>{brand.name}</span>
-                  {adminMode ? (
+                  {consoleLabel ? (
                     <span className="mt-0.5 block text-xs font-normal normal-case tracking-normal text-muted-foreground">
-                      Operator console
+                      {consoleLabel}
                     </span>
                   ) : null}
                 </SheetTitle>
