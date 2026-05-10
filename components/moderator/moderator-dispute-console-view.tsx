@@ -404,6 +404,204 @@ function ThreadSnapshotChat({
   )
 }
 
+type ForensicsEvidenceResult = {
+  evidence_id: string
+  dispute_id: string
+  object_key: string
+  file_type: string
+  ela_status: string
+  ela_score: number | null
+  heatmap_object_key: string | null
+  heatmap_url: string | null
+  is_tampered: boolean | null
+  tamper_metadata: unknown
+  ela_error: string | null
+  ela_completed_at: string | null
+}
+
+type ForensicsResponse = {
+  dispute_id: string
+  evidence_results: ForensicsEvidenceResult[]
+  total: number
+}
+
+function ForensicsResultsView({
+  data,
+  isPending,
+  errorMessage,
+}: {
+  data: unknown
+  isPending?: boolean
+  errorMessage?: string | null
+}) {
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    )
+  }
+  if (errorMessage) {
+    return <p className="text-sm text-destructive">{errorMessage}</p>
+  }
+
+  const payload = data as ForensicsResponse | null
+  const results = payload?.evidence_results ?? []
+
+  if (results.length === 0) {
+    return <p className="text-sm text-muted-foreground">No forensics results available.</p>
+  }
+
+  const formatTime = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat('en-GB', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date(iso))
+      : '—'
+
+  const filename = (key: string) => key.split('/').pop() || key
+
+  const statusBadge = (status: string, error: string | null) => {
+    if (error) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+          Failed
+        </span>
+      )
+    }
+    const s = status.toLowerCase()
+    if (s === 'completed') {
+      return (
+        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+          Completed
+        </span>
+      )
+    }
+    if (s === 'pending' || s === 'running' || s === 'queued') {
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+          {status}
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        {status}
+      </span>
+    )
+  }
+
+  const scoreBar = (score: number | null) => {
+    if (score === null || score === undefined) return null
+    const pct = Math.min(Math.max(score * 100, 0), 100)
+    let barColor = 'bg-emerald-500'
+    if (pct > 30) barColor = 'bg-amber-500'
+    if (pct > 60) barColor = 'bg-red-500'
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-foreground">ELA Score</span>
+          <span className="font-semibold tabular-nums text-foreground">{score.toFixed(4)}</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div className={cn('h-2 rounded-full', barColor)} style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {results.map((ev) => (
+        <div
+          key={ev.evidence_id}
+          className="rounded-lg border border-border bg-background p-4 space-y-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground" title={filename(ev.object_key)}>
+                {filename(ev.object_key)}
+              </p>
+              <p className="text-[10px] text-muted-foreground font-mono truncate">{ev.evidence_id}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {statusBadge(ev.ela_status, ev.ela_error)}
+              {ev.is_tampered && (
+                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                  Tampered
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {ev.heatmap_url && (
+              <a
+                href={ev.heatmap_url}
+                target="_blank"
+                rel="noreferrer"
+                className="block"
+              >
+                <img
+                  src={ev.heatmap_url}
+                  alt={`ELA heatmap for ${filename(ev.object_key)}`}
+                  className="max-h-48 w-full rounded-md border object-contain"
+                  loading="lazy"
+                />
+                <p className="mt-1 text-[10px] text-center text-muted-foreground">ELA Heatmap</p>
+              </a>
+            )}
+
+            <div className="flex flex-col justify-center space-y-3">
+              {scoreBar(ev.ela_score)}
+
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>File type</span>
+                  <span className="font-medium text-foreground">{ev.file_type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Completed</span>
+                  <span className="font-medium text-foreground">{formatTime(ev.ela_completed_at)}</span>
+                </div>
+                {ev.heatmap_object_key && (
+                  <div className="flex justify-between">
+                    <span>Heatmap key</span>
+                    <span className="truncate max-w-[12rem] font-mono text-[10px] text-foreground" title={ev.heatmap_object_key}>
+                      {filename(ev.heatmap_object_key)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {ev.ela_error && (
+                <div className="rounded-md bg-red-50 p-2 text-xs text-red-700">
+                  <p className="font-semibold">Error</p>
+                  <p>{ev.ela_error}</p>
+                </div>
+              )}
+
+              {ev.tamper_metadata && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    Tamper metadata
+                  </summary>
+                  <pre className="mt-1 max-h-32 overflow-auto rounded-md bg-muted/40 p-2 text-[10px] font-mono whitespace-pre-wrap">
+                    {JSON.stringify(ev.tamper_metadata, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-muted-foreground">Total results: {payload?.total ?? results.length}</p>
+    </div>
+  )
+}
+
 export function ModeratorDisputeConsoleView({
   accessToken,
   disputeId,
@@ -661,7 +859,7 @@ export function ModeratorDisputeConsoleView({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AdminJsonInspect
+          <ForensicsResultsView
             data={forensicsQuery.data}
             isPending={forensicsQuery.isPending}
             errorMessage={
