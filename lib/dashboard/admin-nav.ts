@@ -39,6 +39,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     heading: 'People & verification',
     items: [
       { label: 'Users', href: '/admin/users', icon: Users },
+      { label: 'Moderators', href: '/admin/moderators', icon: Users },
       { label: 'Risk flags', href: '/admin/risk-flags', icon: ShieldAlert },
       { label: 'KYC review queue', href: '/admin/kyc/review-queue', icon: ClipboardList },
       { label: 'Manual KYC', href: '/admin/kyc/submissions', icon: FileStack },
