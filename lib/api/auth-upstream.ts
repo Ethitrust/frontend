@@ -73,7 +73,9 @@ type AuthSegment =
   | "register"
   | "login"
   | "verify-email"
-  | "resend-verification";
+  | "resend-verification"
+  | "reset-password"
+  | "confirm-reset-password";
 
 export async function postAuthUpstream(
   segment: AuthSegment,

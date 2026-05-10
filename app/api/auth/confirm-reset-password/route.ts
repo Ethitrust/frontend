@@ -1,4 +1,4 @@
-import { forgotPasswordPayloadSchema } from '@/lib/validators/forgot-password'
+import { confirmResetPasswordPayloadSchema } from '@/lib/validators/confirm-reset-password'
 import { postAuthUpstream } from '@/lib/api/auth-upstream'
 
 export async function POST(request: Request) {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const parsed = forgotPasswordPayloadSchema.safeParse(json)
+  const parsed = confirmResetPasswordPayloadSchema.safeParse(json)
   if (!parsed.success) {
     const flat = parsed.error.flatten()
     return Response.json(
@@ -18,5 +18,5 @@ export async function POST(request: Request) {
     )
   }
 
-  return postAuthUpstream('reset-password', parsed.data, request)
+  return postAuthUpstream('confirm-reset-password', parsed.data, request)
 }
