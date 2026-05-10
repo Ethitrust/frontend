@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { AdminJsonInspect } from '@/components/admin/admin-json-inspect'
+import { ChatAnalysesView } from '@/components/admin/chat-analyses-view'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -891,7 +891,7 @@ export function ModeratorDisputeConsoleView({
 
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-purple-900">Stored analyses</h4>
-            <AdminJsonInspect
+            <ChatAnalysesView
               data={analysesQuery.data}
               isPending={analysesQuery.isPending}
               errorMessage={

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { ChatAnalysesView } from '@/components/admin/chat-analyses-view'
 import { AdminJsonInspect } from '@/components/admin/admin-json-inspect'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
