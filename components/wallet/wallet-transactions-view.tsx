@@ -104,9 +104,13 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
   const reconcileMutation = useMutation({
     mutationFn: (transactionId: string) =>
       reconcileWalletTransaction(accessToken, walletId, transactionId),
-    onSuccess: () => {
-      toast.success("Transaction reconciled");
-      txsQuery.refetch();
+    onSuccess: (data: any) => {
+      if (data?.status === "success") {
+        toast.success("Transaction reconciled");
+        txsQuery.refetch();
+      } else {
+        toast.info("It is still pending");
+      }
     },
   });
 
@@ -258,13 +262,18 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                               Escrow
                             </Link>
                           ) : null}
-                          {row.status === "pending" ? (
+                          {row.status === "pending" &&
+                          row.type === "deposit" ? (
                             <Button
                               variant={"ghost"}
                               size="sm"
                               className="rounded-full text-sm"
                               type="button"
-                              onClick={() => reconcileMutation.mutate(row.id)}
+                              onClick={() =>
+                                reconcileMutation.mutate(
+                                  row.reference as string,
+                                )
+                              }
                               disabled={reconcileMutation.isPending}
                             >
                               {reconcileMutation.isPending ? (
