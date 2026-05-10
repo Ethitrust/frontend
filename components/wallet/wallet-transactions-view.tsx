@@ -38,6 +38,7 @@ import {
 import type { WalletRow } from "@/lib/wallets/wallet-types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Spinner } from "../ui/spinner";
 
 const PAGE_SIZE = 20;
 
@@ -259,13 +260,17 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                           ) : null}
                           {row.status === "pending" ? (
                             <Button
-                              variant={"default"}
+                              variant={"ghost"}
                               size="sm"
-                              className="ml-2 rounded-full"
+                              className="rounded-full"
                               type="button"
                               onClick={() => reconcileMutation.mutate(row.id)}
                             >
-                              Reconcile
+                              {reconcileMutation.isPending ? (
+                                <Spinner />
+                              ) : (
+                                "Reconcile"
+                              )}
                             </Button>
                           ) : null}
                         </TableCell>
