@@ -92,6 +92,318 @@ function extractEvidenceOptions(threadData: unknown): { id: string; label: strin
   return []
 }
 
+type ThreadMessage = {
+  id: string
+  sender_id: string
+  sender_name: string | null
+  sender_email: string | null
+  sender_role: string | null
+  message_type: string
+  message: string
+  created_at: string
+}
+
+type ThreadEvidence = {
+  id: string
+  message_id: string | null
+  uploaded_by: string
+  uploaded_by_name: string | null
+  uploaded_by_email: string | null
+  uploaded_by_role: string | null
+  object_key: string
+  file_url: string
+  file_type: string
+  is_tampered: boolean | null
+  tamper_metadata: unknown
+  ela_status: string | null
+  ela_score: number | null
+  heatmap_object_key: string | null
+}
+
+function ThreadSnapshotChat({
+  data,
+  isPending,
+  errorMessage,
+}: {
+  data: unknown
+  isPending?: boolean
+  errorMessage?: string | null
+}) {
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-3/4" />
+        <Skeleton className="h-12 w-1/2" />
+        <Skeleton className="h-12 w-2/3" />
+      </div>
+    )
+  }
+  if (errorMessage) {
+    return <p className="text-sm text-destructive">{errorMessage}</p>
+  }
+
+  const payload = data as {
+    messages?: ThreadMessage[]
+    evidence?: ThreadEvidence[]
+  } | null
+
+  const messages = payload?.messages ?? []
+  const evidenceList = payload?.evidence ?? []
+
+  if (messages.length === 0 && evidenceList.length === 0) {
+    return <p className="text-sm text-muted-foreground">No thread data available.</p>
+  }
+
+  const sortedMessages = [...messages].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+
+  const evidenceByMessage = new Map<string, ThreadEvidence[]>()
+  const orphanedEvidence: ThreadEvidence[] = []
+
+  evidenceList.forEach((ev) => {
+    if (ev.message_id) {
+      const arr = evidenceByMessage.get(ev.message_id)
+      if (arr) arr.push(ev)
+      else evidenceByMessage.set(ev.message_id, [ev])
+    } else {
+      orphanedEvidence.push(ev)
+    }
+  })
+
+  const formatTime = (iso: string) =>
+    new Intl.DateTimeFormat('en-GB', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(iso))
+
+  const initials = (name: string | null) =>
+    (name || '?')
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+
+  const roleBadgeClass = (role: string | null) => {
+    switch (role?.toLowerCase()) {
+      case 'buyer':
+        return 'bg-blue-100 text-blue-800'
+      case 'seller':
+        return 'bg-emerald-100 text-emerald-800'
+      case 'moderator':
+      case 'admin':
+        return 'bg-purple-100 text-purple-800'
+      default:
+        return 'bg-muted text-muted-foreground'
+    }
+  }
+
+  return (
+    <div className="max-h-[min(70vh,560px)] overflow-auto space-y-6 pr-2">
+      {sortedMessages.map((msg) => {
+        const attached = evidenceByMessage.get(msg.id) ?? []
+        return (
+          <div key={msg.id} className="flex gap-3">
+            <div
+              className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                roleBadgeClass(msg.sender_role)
+              )}
+            >
+              {initials(msg.sender_name)}
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-sm font-semibold text-foreground">
+                  {msg.sender_name || 'Unknown'}
+                </span>
+                {msg.sender_role && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+                      roleBadgeClass(msg.sender_role)
+                    )}
+                  >
+                    {msg.sender_role}
+                  </span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {msg.sender_email}
+                </span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {formatTime(msg.created_at)}
+                </span>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-foreground whitespace-pre-wrap">
+                {msg.message}
+              </div>
+
+              {attached.length > 0 && (
+                <div className="space-y-2">
+                  {attached.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="rounded-lg border border-border bg-background p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Evidence from {ev.uploaded_by_name || 'Unknown'}
+                        </span>
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                            roleBadgeClass(ev.uploaded_by_role)
+                          )}
+                        >
+                          {ev.uploaded_by_role || 'unknown role'}
+                        </span>
+                      </div>
+
+                      {ev.file_type?.startsWith('image/') ? (
+                        <div className="space-y-2">
+                          <a
+                            href={ev.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block"
+                          >
+                            <img
+                              src={ev.file_url}
+                              alt={ev.object_key}
+                              className="max-h-64 rounded-md border object-contain"
+                              loading="lazy"
+                            />
+                          </a>
+                          <div className="flex flex-wrap gap-2">
+                            {ev.is_tampered && (
+                              <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                                Tampered
+                              </span>
+                            )}
+                            {ev.ela_status && (
+                              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                                ELA: {ev.ela_status}
+                              </span>
+                            )}
+                            {ev.ela_score !== null && ev.ela_score !== undefined && (
+                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                                Score: {ev.ela_score}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="16" y1="13" x2="8" y2="13" />
+                              <line x1="16" y1="17" x2="8" y2="17" />
+                              <polyline points="10 9 9 9 8 9" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <a
+                              href={ev.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block truncate text-sm font-medium text-primary hover:underline"
+                            >
+                              {ev.object_key.split('/').pop() || ev.object_key}
+                            </a>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {ev.is_tampered && (
+                                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                                  Tampered
+                                </span>
+                              )}
+                              {ev.ela_status && (
+                                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                                  ELA: {ev.ela_status}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+
+      {orphanedEvidence.length > 0 && (
+        <div className="space-y-3 border-t border-border pt-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Evidence without linked message
+          </h4>
+          {orphanedEvidence.map((ev) => (
+            <div
+              key={ev.id}
+              className="rounded-lg border border-border bg-background p-3 space-y-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Evidence from {ev.uploaded_by_name || 'Unknown'}
+                </span>
+                <span
+                  className={cn(
+                    'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                    roleBadgeClass(ev.uploaded_by_role)
+                  )}
+                >
+                  {ev.uploaded_by_role || 'unknown role'}
+                </span>
+              </div>
+              {ev.file_type?.startsWith('image/') ? (
+                <a
+                  href={ev.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                >
+                  <img
+                    src={ev.file_url}
+                    alt={ev.object_key}
+                    className="max-h-64 rounded-md border object-contain"
+                    loading="lazy"
+                  />
+                </a>
+              ) : (
+                <a
+                  href={ev.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-sm font-medium text-primary hover:underline"
+                >
+                  {ev.object_key.split('/').pop() || ev.object_key}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ModeratorDisputeConsoleView({
   accessToken,
   disputeId,
@@ -203,10 +515,10 @@ export function ModeratorDisputeConsoleView({
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Thread snapshot</CardTitle>
-          <CardDescription>Latest serialized thread export.</CardDescription>
+          <CardDescription>Chronological chat transcript with attached evidence.</CardDescription>
         </CardHeader>
         <CardContent>
-          <AdminJsonInspect
+          <ThreadSnapshotChat
             data={threadQuery.data}
             isPending={threadQuery.isPending}
             errorMessage={threadErr}
