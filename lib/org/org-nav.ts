@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Building2, Handshake, Home, Landmark, Settings, Wallet } from 'lucide-react'
+import { Building2, Handshake, Home, Landmark, Settings, Terminal, Wallet } from 'lucide-react'
 
 import type { OrganizationRow } from '@/lib/organizations/organization-types'
 
@@ -27,6 +27,7 @@ export function getOrgNavSections(orgId: string): OrgNavSection[] {
         { label: 'Escrows', href: `${base}/escrows`, icon: Handshake },
         { label: 'Wallet', href: `${base}/wallet`, icon: Landmark },
         { label: 'Settings', href: `${base}/settings`, icon: Settings },
+        { label: 'Developer', href: `${base}/developer`, icon: Terminal },
       ],
     },
     {

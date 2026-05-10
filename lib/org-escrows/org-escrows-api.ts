@@ -317,3 +317,47 @@ export async function postOrgEscrowResend(
     throw new Error(getBffErrorMessage(data));
   }
 }
+
+export async function fetchOrgWebhookLog(
+  accessToken: string,
+  orgId: string,
+): Promise<OrgWebhookLogRow[]> {
+  const res = await fetch("/api/me/org-escrows/webhooks", {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Organization-Id": orgId,
+    },
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data));
+  }
+  if (!Array.isArray(data)) {
+    throw new Error("Unexpected webhook log response.");
+  }
+  return data as OrgWebhookLogRow[];
+}
+
+export async function postOrgWebhookTest(
+  accessToken: string,
+  orgId: string,
+): Promise<{ success: boolean; http_status?: number | null; error?: string | null; target_url?: string | null }> {
+  const res = await fetch("/api/me/org-escrows/webhooks/test", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Organization-Id": orgId,
+    },
+    body: "{}",
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data));
+  }
+  return data as { success: boolean; http_status?: number | null; error?: string | null; target_url?: string | null };
+}
