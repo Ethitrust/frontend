@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils'
 
 export function SignupForm({ className }: { className?: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const registerMutation = useRegisterMutation()
 
   const form = useForm<SignupPayload>({
@@ -42,7 +43,7 @@ export function SignupForm({ className }: { className?: string }) {
       first_name: '',
       last_name: '',
       phone_number: '',
-      email: '',
+      email: searchParams.get('email') || '',
       password: '',
     },
   })

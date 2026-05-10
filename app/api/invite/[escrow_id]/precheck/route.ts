@@ -1,25 +1,16 @@
-import type { InvitePrecheckResponse } from '@/lib/types/invite-precheck'
+import { proxyV1GetJson } from '@/lib/api/proxy-v1'
 
-/** Stub precheck — replace with microservice call */
+/** BFF: proxies to real backend `GET /api/v1/escrows/{escrow_id}/invitation/precheck` */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ escrow_id: string }> },
 ) {
   const { escrow_id } = await context.params
-
-  const body: InvitePrecheckResponse = {
-    escrow_id,
-    escrow_title: 'B2B shipment — pending acceptance',
-    currency: 'ETB',
-    amount_display: '—',
-    invitee_role: 'seller',
-    authenticated: false,
-    requirements: {
-      needs_registration: true,
-      needs_email_verification: false,
-      needs_kyc: true,
-    },
-  }
-
-  return Response.json(body)
+  const { searchParams } = new URL(request.url)
+  const email = searchParams.get('invitee_email')
+  const qs = email ? `?invitee_email=${encodeURIComponent(email)}` : ''
+  return proxyV1GetJson(
+    request,
+    `/api/v1/escrows/${encodeURIComponent(escrow_id)}/invitation/precheck${qs}`,
+  )
 }
