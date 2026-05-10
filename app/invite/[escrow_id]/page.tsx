@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { EscrowInviteLanding } from '@/components/invite/escrow-invite-landing'
 
@@ -15,5 +16,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function InvitePage({ params }: Props) {
   const { escrow_id } = await params
 
-  return <EscrowInviteLanding escrowId={escrow_id} />
+  return (
+    <Suspense fallback={null}>
+      <EscrowInviteLanding escrowId={escrow_id} />
+    </Suspense>
+  )
 }

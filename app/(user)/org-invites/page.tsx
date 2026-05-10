@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { OrgInvitesRoute } from '@/components/organizations/organizations-user-pages'
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 }
 
 export default function OrgInvitesPage() {
-  return <OrgInvitesRoute />
+  return (
+    <Suspense fallback={null}>
+      <OrgInvitesRoute />
+    </Suspense>
+  )
 }
