@@ -30,11 +30,17 @@ export type EscrowDisputeRow = {
   updated_at?: string | null
 }
 
+export type DisputeMessageReplyPreview = {
+  message_id: string
+  text: string
+}
+
 export type DisputeMessageRow = {
   id: string
   dispute_id?: string | null
   sender_id?: string | null
   reply_to_message_id?: string | null
+  reply_to_message?: DisputeMessageReplyPreview | null
   message_type?: string | null
   message?: string | null
   created_at?: string | null

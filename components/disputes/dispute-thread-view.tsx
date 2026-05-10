@@ -501,6 +501,20 @@ export function DisputeThreadView(props: {
                                 : ""}
                             </time>
                           </div>
+                          {m.reply_to_message && (
+                            <div
+                              className={cn(
+                                "mb-2 rounded-md border px-2.5 py-1.5 text-xs",
+                                mine
+                                  ? "border-primary/10 bg-primary/[0.08] text-primary/80"
+                                  : "border-border/60 bg-muted/30 text-muted-foreground",
+                              )}
+                            >
+                              <p className="line-clamp-2">
+                                {m.reply_to_message.text}
+                              </p>
+                            </div>
+                          )}
                           <p className="whitespace-pre-wrap">{m.message}</p>
                           {terminal ? null : (
                             <Button
