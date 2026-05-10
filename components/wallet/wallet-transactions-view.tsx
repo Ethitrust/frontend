@@ -262,9 +262,10 @@ function WalletTransactionsSignedIn({ accessToken }: { accessToken: string }) {
                             <Button
                               variant={"ghost"}
                               size="sm"
-                              className="rounded-full"
+                              className="rounded-full text-sm"
                               type="button"
                               onClick={() => reconcileMutation.mutate(row.id)}
+                              disabled={reconcileMutation.isPending}
                             >
                               {reconcileMutation.isPending ? (
                                 <Spinner />
