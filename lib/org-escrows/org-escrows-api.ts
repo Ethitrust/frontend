@@ -22,6 +22,7 @@ async function parseJson(res: Response): Promise<unknown> {
 
 export async function fetchOrgEscrowsList(
   accessToken: string,
+  orgId: string,
   opts: {
     page?: number;
     pageSize?: number;
@@ -43,6 +44,7 @@ export async function fetchOrgEscrowsList(
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
+      "X-Organization-Id": orgId,
     },
     cache: "no-store",
   });
@@ -70,6 +72,7 @@ export async function fetchOrgEscrowsList(
 
 export async function fetchOrgEscrowReportSummary(
   accessToken: string,
+  orgId: string,
   dateFrom: string,
   dateTo: string,
 ): Promise<OrgEscrowReportSummary> {
@@ -81,6 +84,7 @@ export async function fetchOrgEscrowReportSummary(
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
+      "X-Organization-Id": orgId,
     },
     cache: "no-store",
   });
@@ -108,6 +112,7 @@ export async function fetchOrgEscrowReportSummary(
 
 export async function fetchOrgEscrowDetail(
   accessToken: string,
+  orgId: string,
   escrowId: string,
 ): Promise<OrgEscrowDetail> {
   const res = await fetch(
@@ -116,6 +121,7 @@ export async function fetchOrgEscrowDetail(
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-Organization-Id": orgId,
       },
       cache: "no-store",
     },
@@ -140,6 +146,7 @@ export async function fetchOrgEscrowDetail(
 
 export async function fetchOrgEscrowEvents(
   accessToken: string,
+  orgId: string,
   escrowId: string,
 ): Promise<OrgEscrowEventsResponse> {
   const res = await fetch(
@@ -148,6 +155,7 @@ export async function fetchOrgEscrowEvents(
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-Organization-Id": orgId,
       },
       cache: "no-store",
     },
@@ -173,6 +181,7 @@ export async function fetchOrgEscrowEvents(
 
 export async function fetchOrgEscrowHealth(
   accessToken: string,
+  orgId: string,
   escrowId: string,
 ): Promise<OrgEscrowHealth> {
   const res = await fetch(
@@ -181,6 +190,7 @@ export async function fetchOrgEscrowHealth(
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-Organization-Id": orgId,
       },
       cache: "no-store",
     },
@@ -201,6 +211,7 @@ export async function fetchOrgEscrowHealth(
 
 export async function fetchOrgEscrowWebhookLogs(
   accessToken: string,
+  orgId: string,
   escrowId: string,
 ): Promise<OrgWebhookLogRow[]> {
   const res = await fetch(
@@ -209,6 +220,7 @@ export async function fetchOrgEscrowWebhookLogs(
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-Organization-Id": orgId,
       },
       cache: "no-store",
     },
@@ -225,6 +237,7 @@ export async function fetchOrgEscrowWebhookLogs(
 
 export async function postOrgEscrowCreate(
   accessToken: string,
+  orgId: string,
   body: unknown,
   idempotencyKey?: string,
 ): Promise<OrgEscrowCreateResponse> {
@@ -235,6 +248,7 @@ export async function postOrgEscrowCreate(
       Accept: "application/json",
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
+      "X-Organization-Id": orgId,
       "X-Idempotency-Key": key,
     },
     body: JSON.stringify(body),
@@ -256,6 +270,7 @@ export async function postOrgEscrowCreate(
 
 export async function postOrgEscrowCancel(
   accessToken: string,
+  orgId: string,
   escrowId: string,
 ): Promise<void> {
   const res = await fetch(
@@ -266,6 +281,7 @@ export async function postOrgEscrowCancel(
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-Organization-Id": orgId,
       },
       body: "{}",
       cache: "no-store",
@@ -279,6 +295,7 @@ export async function postOrgEscrowCancel(
 
 export async function postOrgEscrowResend(
   accessToken: string,
+  orgId: string,
   escrowId: string,
 ): Promise<void> {
   const res = await fetch(
@@ -289,6 +306,7 @@ export async function postOrgEscrowResend(
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        "X-Organization-Id": orgId,
       },
       body: "{}",
       cache: "no-store",

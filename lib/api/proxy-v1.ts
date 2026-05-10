@@ -39,6 +39,9 @@ export async function proxyV1GetJson(
       headers: {
         Accept: "application/json",
         Authorization: authHeader,
+        ...(request.headers.get("x-organization-id")
+          ? { "X-Organization-Id": request.headers.get("x-organization-id")! }
+          : {}),
       },
       cache: "no-store",
     });
@@ -130,6 +133,10 @@ export async function proxyV1PostJson(
       "Content-Type": contentType,
       Authorization: authHeader,
     };
+    const orgId = request.headers.get("x-organization-id");
+    if (orgId) {
+      fwdHeaders["X-Organization-Id"] = orgId;
+    }
     const idem =
       request.headers.get("x-idempotency-key") ??
       request.headers.get("X-Idempotency-Key");
@@ -240,6 +247,9 @@ export async function proxyV1PatchJson(
         Accept: "application/json",
         "Content-Type": contentType,
         Authorization: authHeader,
+        ...(request.headers.get("x-organization-id")
+          ? { "X-Organization-Id": request.headers.get("x-organization-id")! }
+          : {}),
       },
       body: bodyText.length > 0 ? bodyText : undefined,
       cache: "no-store",
@@ -318,6 +328,9 @@ export async function proxyV1Delete(
   const headers: HeadersInit = {
     Accept: "application/json",
     Authorization: authHeader,
+    ...(request.headers.get("x-organization-id")
+      ? { "X-Organization-Id": request.headers.get("x-organization-id")! }
+      : {}),
   };
   if (hasBody) {
     const contentType =
@@ -416,6 +429,9 @@ export async function proxyV1PostMultipart(
       headers: {
         Accept: "application/json",
         Authorization: authHeader,
+        ...(request.headers.get("x-organization-id")
+          ? { "X-Organization-Id": request.headers.get("x-organization-id")! }
+          : {}),
       },
       body: formData,
       cache: "no-store",

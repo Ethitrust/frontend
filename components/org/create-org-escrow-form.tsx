@@ -119,7 +119,7 @@ export function CreateOrgEscrowForm({
 
   const initMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
-      postOrgEscrowCreate(accessToken!, payload),
+      postOrgEscrowCreate(accessToken!, orgId, payload),
     onSuccess: (row) => {
       toast.success("Org escrow created", { description: row.title ?? row.id });
       void queryClient.invalidateQueries({ queryKey: ["me", "org-escrows"] });

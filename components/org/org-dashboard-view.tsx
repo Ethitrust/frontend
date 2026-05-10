@@ -59,7 +59,7 @@ export function OrgDashboardView({ orgId }: { orgId: string }) {
 
   const reportQuery = useQuery({
     queryKey: ["me", "org-escrows", "report", orgId, from, to],
-    queryFn: () => fetchOrgEscrowReportSummary(accessToken!, from, to),
+    queryFn: () => fetchOrgEscrowReportSummary(accessToken!, orgId, from, to),
     enabled: Boolean(accessToken && orgId),
     staleTime: 60_000,
   });
@@ -212,9 +212,11 @@ export function OrgDashboardView({ orgId }: { orgId: string }) {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-semibold tabular-nums">
-                {report.avg_settlement_time_hours.toLocaleString("en-GB", {
-                  maximumFractionDigits: 1,
-                })}{" "}
+                {report.avg_settlement_time_hours != null 
+                  ? report.avg_settlement_time_hours.toLocaleString("en-GB", {
+                      maximumFractionDigits: 1,
+                    })
+                  : "N/A"}{" "}
                 <span className="text-lg font-normal text-muted-foreground">
                   hours
                 </span>

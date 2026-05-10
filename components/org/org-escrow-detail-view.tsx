@@ -89,7 +89,7 @@ export function OrgEscrowDetailView({
 
   const detailQuery = useQuery({
     queryKey: ["me", "org-escrows", "detail", orgId, escrowId],
-    queryFn: () => fetchOrgEscrowDetail(accessToken!, escrowId),
+    queryFn: () => fetchOrgEscrowDetail(accessToken!, orgId, escrowId),
     enabled: Boolean(accessToken && escrowId),
     retry: false,
   });
@@ -103,29 +103,29 @@ export function OrgEscrowDetailView({
 
   const eventsQuery = useQuery({
     queryKey: ["me", "org-escrows", "events", orgId, escrowId],
-    queryFn: () => fetchOrgEscrowEvents(accessToken!, escrowId),
+    queryFn: () => fetchOrgEscrowEvents(accessToken!, orgId, escrowId),
     enabled: auxEnabled,
   });
 
   const healthQuery = useQuery({
     queryKey: ["me", "org-escrows", "health", orgId, escrowId],
-    queryFn: () => fetchOrgEscrowHealth(accessToken!, escrowId),
+    queryFn: () => fetchOrgEscrowHealth(accessToken!, orgId, escrowId),
     enabled: auxEnabled,
   });
 
   const webhooksQuery = useQuery({
     queryKey: ["me", "org-escrows", "webhooks", orgId, escrowId],
-    queryFn: () => fetchOrgEscrowWebhookLogs(accessToken!, escrowId),
+    queryFn: () => fetchOrgEscrowWebhookLogs(accessToken!, orgId, escrowId),
     enabled: auxEnabled,
   });
 
   const cancelMutation = useMutation({
-    mutationFn: () => postOrgEscrowCancel(accessToken!, escrowId),
+    mutationFn: () => postOrgEscrowCancel(accessToken!, orgId, escrowId),
     onSuccess: () => bumpOrgEscrowQueries(queryClient),
   });
 
   const resendMutation = useMutation({
-    mutationFn: () => postOrgEscrowResend(accessToken!, escrowId),
+    mutationFn: () => postOrgEscrowResend(accessToken!, orgId, escrowId),
     onSuccess: () => bumpOrgEscrowQueries(queryClient),
   });
 

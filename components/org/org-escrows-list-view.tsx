@@ -109,7 +109,7 @@ export function OrgEscrowsListView({ orgId }: { orgId: string }) {
       search,
     ],
     queryFn: () =>
-      fetchOrgEscrowsList(accessToken!, {
+      fetchOrgEscrowsList(accessToken!, orgId, {
         page,
         pageSize: PAGE_SIZE,
         status: tab === "all" ? undefined : tab,
