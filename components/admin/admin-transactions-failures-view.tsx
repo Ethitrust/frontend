@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AdminJsonInspect } from '@/components/admin/admin-json-inspect'
+import { AdminStructuredDataView } from '@/components/admin/admin-structured-data-view'
 import { fetchAdminTransactionsFailures } from '@/lib/admin/admin-platform-api'
 import { ethitrustThemeTokens } from '@/lib/ethitrust-theme'
 import { cn } from '@/lib/utils'
@@ -106,7 +106,8 @@ export function AdminTransactionsFailuresView({ accessToken }: { accessToken: st
               </Table>
             </div>
           ) : (
-            <AdminJsonInspect
+            <AdminStructuredDataView
+              accessToken={accessToken}
               data={data}
               errorMessage={
                 failuresQuery.isError ? (failuresQuery.error as Error)?.message : null
