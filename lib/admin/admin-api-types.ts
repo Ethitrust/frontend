@@ -140,6 +140,8 @@ export type AdminOrgApplicationRow = {
   tin?: string | null
   business_license_file_id?: string | null
   business_license_object_key?: string | null
+  commercial_registration_file_id?: string | null
+  commercial_registration_object_key?: string | null
   submitted_at?: string | null
   reviewed_at?: string | null
   reviewed_by?: string | null
@@ -147,9 +149,10 @@ export type AdminOrgApplicationRow = {
   admin_actions?: string[]
 }
 
-/** `GET …/applications/{application_id}` detail (+ `business_license_url`) */
+/** `GET …/applications/{application_id}` detail (+ URLs) */
 export type AdminOrgApplicationDetail = AdminOrgApplicationRow & {
   business_license_url?: string | null
+  commercial_registration_url?: string | null
 }
 
 export type AdminOrgApplicationReviewBody = {
