@@ -278,3 +278,10 @@ export async function fetchAdminKycCrossCheck(
   const id = encodeURIComponent(userId)
   return adminGetJson(accessToken, `/api/me/admin/kyc/${id}/cross-check`)
 }
+
+export async function postAdminCreateModerator(
+  accessToken: string,
+  body: import('@/lib/admin/admin-api-types').AdminCreateModeratorBody,
+): Promise<unknown> {
+  return adminPostJson(accessToken, '/api/me/admin/moderators', body)
+}

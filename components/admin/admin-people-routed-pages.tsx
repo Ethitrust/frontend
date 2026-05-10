@@ -6,6 +6,7 @@ import { AdminKycSubmissionDetailView } from '@/components/admin/admin-kyc-submi
 import { AdminKycSubmissionsListView } from '@/components/admin/admin-kyc-submissions-list-view'
 import { AdminRiskFlagsView } from '@/components/admin/admin-risk-flags-view'
 import { AdminUsersListView } from '@/components/admin/admin-users-list-view'
+import { AdminModeratorsView } from '@/components/admin/admin-moderators-view'
 
 export function AdminUsersRoutedPage() {
   return (
@@ -45,6 +46,14 @@ export function AdminKycSubmissionDetailRoutedPage({ submissionId }: { submissio
       {({ accessToken }) => (
         <AdminKycSubmissionDetailView accessToken={accessToken} submissionId={submissionId} />
       )}
+    </AdminOperatorGate>
+  )
+}
+
+export function AdminModeratorsRoutedPage() {
+  return (
+    <AdminOperatorGate>
+      {({ accessToken }) => <AdminModeratorsView accessToken={accessToken} />}
     </AdminOperatorGate>
   )
 }

@@ -130,6 +130,28 @@ export type AdminKycCrossCheck = {
   kyc_status?: string | null
 }
 
+/** `POST /api/v1/admin/moderators` request body */
+export type AdminCreateModeratorBody = {
+  first_name: string
+  last_name: string
+  phone_number: string
+  email: string
+  password: string
+}
+
+/** `POST /api/v1/admin/moderators` response */
+export type AdminModeratorRow = {
+  id: string
+  name: string
+  email: string
+  email_verified: boolean
+  role: string
+  banned: boolean
+  two_factor_enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
 /** `GET …/organizations/applications` list row */
 export type AdminOrgApplicationRow = {
   application_id: string
