@@ -88,6 +88,14 @@ export async function fetchAdminDisputes(
   return adminGetJson(accessToken, `/api/me/admin/disputes?${listQs(page, pageSize)}`)
 }
 
+export async function fetchModeratorAssignedDisputes(
+  accessToken: string,
+  page: number,
+  pageSize: number,
+): Promise<AdminPaginatedEnvelope<AdminDisputeListRow>> {
+  return adminGetJson(accessToken, `/api/me/admin/disputes/assigned?${listQs(page, pageSize)}`)
+}
+
 export async function fetchAdminWallets(
   accessToken: string,
   page: number,
@@ -281,6 +289,14 @@ export async function fetchAdminDisputeForensics(
 ): Promise<unknown> {
   const id = encodeURIComponent(disputeId)
   return adminGetJson(accessToken, `/api/me/admin/disputes/${id}/forensics`)
+}
+
+export async function fetchAdminDisputeAnalyses(
+  accessToken: string,
+  disputeId: string,
+): Promise<unknown> {
+  const id = encodeURIComponent(disputeId)
+  return adminGetJson(accessToken, `/api/me/admin/disputes/${id}/analyses`)
 }
 
 export async function postAdminDisputeAnalyzeChat(

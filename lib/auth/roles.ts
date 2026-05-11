@@ -5,3 +5,9 @@ export function isPlatformAdminRole(role: string | null | undefined): boolean {
   const n = role.trim().toLowerCase()
   return n === 'admin' || n === 'superadmin'
 }
+
+export function isPlatformModeratorOrAdminRole(role: string | null | undefined): boolean {
+  if (!role) return false
+  const n = role.trim().toLowerCase()
+  return n === 'admin' || n === 'superadmin' || n === 'moderator'
+}
