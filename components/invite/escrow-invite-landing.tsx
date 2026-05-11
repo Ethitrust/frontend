@@ -80,9 +80,16 @@ export function EscrowInviteLanding({ escrowId }: { escrowId: string }) {
     const precheckUrl = `/api/invite/${encodeURIComponent(escrowId)}/precheck${email ? `?invitee_email=${encodeURIComponent(email)}` : ""}`;
 
     fetch(precheckUrl, { cache: "no-store" })
-      .then((r) => {
-        if (!r.ok) throw new Error("Could not load invitation details.");
-        return r.json();
+      .then(async (r) => {
+        const body = await r.json().catch(() => null);
+        if (!r.ok) {
+          const message =
+            body && typeof body === "object" && "error" in body && typeof body.error === "string"
+              ? body.error
+              : "Could not load invitation details.";
+          throw new Error(message);
+        }
+        return body;
       })
       .then((pc) => {
         setPrecheck(pc as PrecheckData);
