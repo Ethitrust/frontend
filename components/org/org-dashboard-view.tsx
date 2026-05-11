@@ -252,7 +252,7 @@ export function OrgDashboardView({ orgId }: { orgId: string }) {
                 </CardHeader>
                 <CardContent>
                   <Button variant="link" className="p-0 h-auto gap-2" asChild>
-                    <Link href={`/org/${orgId}/settings`}>
+                    <Link href={`/org/${orgId}/developer`}>
                       Configure webhooks <ArrowRight className="size-3" />
                     </Link>
                   </Button>
@@ -266,8 +266,10 @@ export function OrgDashboardView({ orgId }: { orgId: string }) {
                   <CardDescription>Explore our developer documentation and integration guides.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button variant="link" className="p-0 h-auto gap-2" disabled>
-                    Coming Soon <ArrowRight className="size-3" />
+                  <Button variant="link" className="p-0 h-auto gap-2" asChild>
+                    <Link href={`/org/${orgId}/developer`}>
+                      View Integration Guide <ArrowRight className="size-3" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
