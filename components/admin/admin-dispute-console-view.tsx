@@ -5,8 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-import { ChatAnalysesView } from '@/components/admin/chat-analyses-view'
-import { AdminJsonInspect } from '@/components/admin/admin-json-inspect'
+import { AdminStructuredDataView } from '@/components/admin/admin-structured-data-view'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -379,7 +378,7 @@ export function AdminDisputeConsoleView({
           <CardDescription>Latest serialized thread export for operators.</CardDescription>
         </CardHeader>
         <CardContent>
-          <AdminJsonInspect data={threadQuery.data} isPending={threadQuery.isPending} errorMessage={threadErr} />
+          <AdminStructuredDataView accessToken={accessToken} data={threadQuery.data} isPending={threadQuery.isPending} errorMessage={threadErr} />
         </CardContent>
       </Card>
 
@@ -527,7 +526,8 @@ export function AdminDisputeConsoleView({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ForensicsResultsView
+          <AdminStructuredDataView
+            accessToken={accessToken}
             data={forensicsQuery.data}
             isPending={forensicsQuery.isPending}
             errorMessage={forensicsQuery.isError && forensicsQuery.error instanceof Error ? forensicsQuery.error.message : null}
