@@ -16,9 +16,11 @@ import {
   Mail,
   MessageSquare,
   Scale,
+  Send,
   Shield,
   ShieldAlert,
   TrendingUp,
+  User,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -53,11 +55,14 @@ import { escrowPartyForViewer } from "@/lib/escrows/escrow-party";
 import {
   fetchMeEscrow,
   fetchMeEscrowMilestones,
+  fetchMeEscrowEvents,
+  fetchMeEscrowMessages,
+  postMeEscrowMessage,
   postMeEscrowAction,
   postMeMilestoneAction,
   type EscrowAction,
 } from "@/lib/escrows/me-escrows-api";
-import type { EscrowRow, MilestoneRow } from "@/lib/escrows/escrow-list-types";
+import type { EscrowRow, MilestoneRow, EscrowEventRow, EscrowMessageRow } from "@/lib/escrows/escrow-list-types";
 import {
   formatEscrowDate,
   formatEscrowDateTime,
@@ -847,6 +852,19 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
     queryFn: () => fetchMeEscrowMilestones(accessToken!, escrowId),
     enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
   });
+  
+  const eventsQuery = useQuery({
+    queryKey: ["me", "escrows", escrowId, "events"],
+    queryFn: () => fetchMeEscrowEvents(accessToken!, escrowId),
+    enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
+  });
+
+  const messagesQuery = useQuery({
+    queryKey: ["me", "escrows", escrowId, "messages"],
+    queryFn: () => fetchMeEscrowMessages(accessToken!, escrowId),
+    enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
+    refetchInterval: 5000, // Simple polling for "real-time" feel
+  });
 
   const disputeLinkQuery = useQuery({
     queryKey: ["me", "disputes", "for-escrow", escrowId],
@@ -1353,6 +1371,63 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
               </CardContent>
             </Card>
 
+            {/* Activity History */}
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <Clock className="size-4 text-muted-foreground" aria-hidden />
+                  Activity History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-5">
+                {eventsQuery.isPending ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (eventsQuery.data ?? []).length === 0 ? (
+                  <p className="text-center text-xs text-muted-foreground py-4">
+                    No activity recorded yet.
+                  </p>
+                ) : (
+                  <div className="relative space-y-4 before:absolute before:left-[11px] before:top-2 before:h-[calc(100%-16px)] before:w-0.5 before:bg-border/60">
+                    {(eventsQuery.data ?? [])
+                      .slice()
+                      .reverse()
+                      .map((event) => (
+                        <div key={event.id} className="relative pl-7">
+                          <div className={cn(
+                            "absolute left-0 top-1.5 size-[24px] rounded-full border-4 border-background ring-1 ring-border flex items-center justify-center bg-card",
+                            event.event_type === "countered" ? "bg-amber-100 ring-amber-200" : ""
+                          )}>
+                            {event.event_type === "countered" ? (
+                              <MessageSquare className="size-2.5 text-amber-600" />
+                            ) : event.event_type === "submitted" ? (
+                              <ArrowLeft className="size-2.5 text-blue-600 rotate-180" />
+                            ) : (
+                              <div className="size-1 rounded-full bg-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium capitalize">
+                              {event.event_type.replace(/_/g, " ")}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatEscrowDateTime(event.created_at)}
+                            </p>
+                            {event.metadata?.note && (
+                              <div className="mt-1.5 rounded-lg bg-muted/40 p-2 text-xs text-foreground italic border-l-2 border-primary/20">
+                                "{event.metadata.note}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Milestones */}
             {milestonesQuery.isPending ? (
               <Card className="shadow-sm">
@@ -1369,6 +1444,85 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                 onMilestoneAction={handleMilestoneAction}
               />
             ) : null}
+
+            {/* Real-time Chat */}
+            <Card className="shadow-sm flex flex-col h-[500px]">
+              <CardHeader className="border-b py-3">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <MessageSquare className="size-4 text-muted-foreground" aria-hidden />
+                  Chat
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messagesQuery.isPending ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-3/4 rounded-lg" />
+                    <Skeleton className="h-10 w-3/4 self-end rounded-lg" />
+                  </div>
+                ) : (messagesQuery.data ?? []).length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
+                    <MessageSquare className="size-8 mb-2 opacity-20" />
+                    <p className="text-sm">No messages yet.</p>
+                    <p className="text-xs">Send a message to start discussing the deal.</p>
+                  </div>
+                ) : (
+                  (messagesQuery.data ?? []).map((msg) => {
+                    const isMe = msg.sender_id === viewerId;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex flex-col max-w-[85%]",
+                          isMe ? "self-end items-end" : "self-start items-start"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "rounded-2xl px-3 py-2 text-sm",
+                            isMe
+                              ? "bg-primary text-primary-foreground rounded-tr-none"
+                              : "bg-muted text-foreground rounded-tl-none"
+                          )}
+                        >
+                          {msg.message}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                          {formatEscrowDateTime(msg.created_at)}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+              <div className="p-4 border-t bg-muted/30">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const input = form.elements.namedItem("chat-input") as HTMLInputElement;
+                    if (!input.value.trim()) return;
+                    
+                    const text = input.value.trim();
+                    input.value = "";
+                    
+                    postMeEscrowMessage(accessToken!, escrowId, text)
+                      .then(() => qc.invalidateQueries({ queryKey: ["me", "escrows", escrowId, "messages"] }))
+                      .catch((err) => toast.error(err.message));
+                  }}
+                  className="flex gap-2"
+                >
+                  <input
+                    name="chat-input"
+                    placeholder="Type a message..."
+                    className="flex-1 bg-background border border-input rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    autoComplete="off"
+                  />
+                  <Button type="submit" size="icon" className="rounded-full shrink-0">
+                    <Send className="size-4" />
+                  </Button>
+                </form>
+              </div>
+            </Card>
           </div>
         </div>
 

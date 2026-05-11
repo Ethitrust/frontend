@@ -2,7 +2,7 @@
 
 import { getBffErrorMessage } from '@/lib/api/upstream-errors'
 
-import type { EscrowRow, MilestoneRow, PaginatedEscrowsList } from '@/lib/escrows/escrow-list-types'
+import type { EscrowRow, MilestoneRow, PaginatedEscrowsList, EscrowEventRow, EscrowMessageRow } from '@/lib/escrows/escrow-list-types'
 
 async function parseJson(res: Response): Promise<unknown> {
   try {
@@ -81,6 +81,73 @@ export async function fetchMeEscrowMilestones(
     throw new Error('Unexpected milestones response.')
   }
   return data as MilestoneRow[]
+}
+
+export async function fetchMeEscrowEvents(
+  accessToken: string,
+  escrowId: string,
+): Promise<EscrowEventRow[]> {
+  const res = await fetch(`/api/me/escrows/${encodeURIComponent(escrowId)}/events`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!Array.isArray(data)) {
+    throw new Error('Unexpected events response.')
+  }
+  return data as EscrowEventRow[]
+}
+
+export async function fetchMeEscrowMessages(
+  accessToken: string,
+  escrowId: string,
+): Promise<EscrowMessageRow[]> {
+  const res = await fetch(`/api/me/escrows/${encodeURIComponent(escrowId)}/messages`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!Array.isArray(data)) {
+    throw new Error('Unexpected messages response.')
+  }
+  return data as EscrowMessageRow[]
+}
+
+export async function postMeEscrowMessage(
+  accessToken: string,
+  escrowId: string,
+  message: string,
+): Promise<EscrowMessageRow> {
+  const res = await fetch(`/api/me/escrows/${encodeURIComponent(escrowId)}/messages`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ message }),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as EscrowMessageRow).id !== 'string') {
+    throw new Error('Unexpected send message response.')
+  }
+  return data as EscrowMessageRow
 }
 
 export async function postInitializeEscrow(accessToken: string, body: unknown): Promise<EscrowRow> {

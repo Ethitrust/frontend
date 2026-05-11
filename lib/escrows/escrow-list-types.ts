@@ -52,3 +52,19 @@ export type MilestoneRow = {
   completed_at?: string | null
   sort_order?: number | null
 }
+export type EscrowEventRow = {
+  id: string
+  escrow_id: string
+  user_id?: string | null
+  event_type: string
+  metadata?: Record<string, any> | null
+  created_at: string
+}
+
+export type EscrowMessageRow = {
+  id: string
+  escrow_id: string
+  sender_id: string
+  message: string
+  created_at: string
+}
