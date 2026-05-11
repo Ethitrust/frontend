@@ -159,42 +159,73 @@ export function OrgDeveloperView({ orgId }: { orgId: string }) {
           <TabsContent value="docs" className="space-y-6">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-base font-semibold">API Reference</CardTitle>
+                <CardTitle className="text-base font-semibold">API Integration Guide</CardTitle>
                 <CardDescription>
                   Base URL: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">https://api.ethitrust.me/v1</code>
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-8">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="rounded-lg border bg-card p-4">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <Key className="size-4" /> Authentication
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      All requests require your API key in the <code className="text-xs">X-API-KEY</code> header.
+                    </p>
+                    <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
+                      {`curl -X GET https://api.ethitrust.me/v1/org-escrows \\
+  -H "X-API-KEY: org_live_..."`}
+                    </pre>
+                  </div>
+
+                  <div className="rounded-lg border bg-card p-4">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <Activity className="size-4" /> Idempotency
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Use <code className="text-xs">X-Idempotency-Key</code> for safe retries on write operations.
+                    </p>
+                    <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
+                      {`X-Idempotency-Key: req_550e8400-e29b`}
+                    </pre>
+                  </div>
+                </div>
+
                 <div className="rounded-lg border bg-card p-4">
-                  <h3 className="font-semibold text-sm mb-2">Authentication</h3>
+                  <h3 className="font-semibold text-sm mb-2">Workflow: Creating an Escrow</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    All requests require your API key in the header.
+                    Initialize a new transaction. Ethitrust will automatically email the invitee.
                   </p>
-                  <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-xs font-mono">
-                    {`curl -X GET https://api.ethitrust.me/v1/org-escrows \\
-  -H "X-API-KEY: org_your_api_key_here"`}
+                  <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
+                    {`curl -X POST https://api.ethitrust.me/v1/org-escrows \\
+  -H "X-API-KEY: your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Purchase of Dell Laptop",
+    "amount": 45000,
+    "invitee_email": "seller@example.com",
+    "escrow_type": "onetime",
+    "inspection_period": 72
+  }'`}
                   </pre>
                 </div>
 
                 <div className="rounded-lg border bg-card p-4">
-                  <h3 className="font-semibold text-sm mb-2">Create an Escrow</h3>
+                  <h3 className="font-semibold text-sm mb-2">Webhook Payloads</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Initialize a new escrow transaction. Ensure you pass an idempotency key.
+                    Verify every webhook using the <code className="text-xs">X-Signature</code> header (HMAC-SHA256).
                   </p>
-                  <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-xs font-mono">
-                    {`curl -X POST https://api.ethitrust.me/v1/org-escrows \\
-  -H "X-API-KEY: org_your_api_key_here" \\
-  -H "X-Idempotency-Key: req_12345" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "title": "Freelance Design Work",
-    "amount": 1500,
-    "currency": "ETB",
-    "initiator_role": "buyer",
-    "receiver_email": "seller@example.com",
-    "who_pays_fees": "buyer",
-    "escrow_type": "digital_goods"
-  }'`}
+                  <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
+                    {`{
+  "event": "escrow.completed",
+  "data": {
+    "escrow_id": "uuid",
+    "amount": 45000,
+    "status": "completed"
+  },
+  "timestamp": "2024-05-11T..."
+}`}
                   </pre>
                 </div>
               </CardContent>
