@@ -28,18 +28,22 @@ function isPublicAuthPath(pathname: string): boolean {
  * `/admin` (plus `/signin` and related auth URLs so logout / onboarding still works).
  */
 export function SessionRoleGate({ children }: { children: ReactNode }) {
-  const [hydrated, setHydrated] = useState(() =>
-    useAuthStore.persist.hasHydrated(),
-  );
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     // Avoid a common pitfall: on first paint `accessToken` is null until
     // zustand/persist rehydrates from localStorage, which can briefly show
     // "Sign in" UI even though a valid token exists.
-    const unsub = useAuthStore.persist.onFinishHydration(() =>
+    const unsub = useAuthStore.persist?.onFinishHydration(() =>
       setHydrated(true),
     );
-    setHydrated(useAuthStore.persist.hasHydrated());
+    setHydrated(useAuthStore.persist?.hasHydrated() ?? false);
+    
+    // If persist is not available for some reason, or already hydrated
+    if (!useAuthStore.persist) {
+      setHydrated(true);
+    }
+
     return unsub;
   }, []);
 
@@ -47,7 +51,17 @@ export function SessionRoleGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    // During server-side rendering (prerendering), we render the children
+    // so that static pages have content. On the client, we wait for
+    // hydration before applying any redirect logic to avoid "flickering"
+    // or incorrect redirects while the accessToken is being loaded from
+    // local storage.
+    if (typeof window === 'undefined') {
+      return children;
+    }
+    return null;
+  }
 
   const meQuery = useQuery({
     queryKey: ["me", "auth", "me"],
