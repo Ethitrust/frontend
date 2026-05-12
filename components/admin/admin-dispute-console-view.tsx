@@ -304,6 +304,138 @@ function roleBadgeClass(role: string | null) {
   }
 }
 
+function PartyChannelChat({
+  label,
+  role,
+  partyId,
+  mediatorId,
+  messages,
+  evidence,
+  forensicsData,
+}: {
+  label: string
+  role: 'buyer' | 'seller'
+  partyId: string | null
+  mediatorId: string | null
+  messages: ThreadMessage[]
+  evidence: ThreadEvidence[]
+  forensicsData?: ForensicsResponse | null
+}) {
+  // Filter to messages in this private channel:
+  // sender=party & recipient=mediator, or sender=mediator & recipient=party,
+  // or system (recipient_id null — visible to all)
+  const channelMessages = messages.filter((m) => {
+    const senderId = m.sender_id
+    const recipientId = (m as ThreadMessage & { recipient_id?: string | null }).recipient_id ?? null
+    if (recipientId === null) return true // system / legacy
+    if (!partyId) return true
+    return (
+      (senderId === partyId && recipientId === mediatorId) ||
+      (senderId === mediatorId && recipientId === partyId)
+    )
+  }).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  const forensicsByEvidenceId = new Map(
+    (forensicsData?.evidence_results ?? []).map((result) => [result.evidence_id, result]),
+  )
+  const evidenceByMessage = new Map<string, ThreadEvidence[]>()
+  evidence.forEach((ev) => {
+    if (!ev.message_id) return
+    evidenceByMessage.set(ev.message_id, [...(evidenceByMessage.get(ev.message_id) ?? []), ev])
+  })
+
+  const initials = (name: string | null) =>
+    (name || '?')
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+
+  const EvidenceAttachment = ({ ev }: { ev: ThreadEvidence }) => {
+    const isImage = ev.file_type?.startsWith('image/')
+    const verdict = getEvidenceVerdict(forensicsByEvidenceId.get(ev.id))
+    return (
+      <div className="overflow-hidden rounded-lg border border-border bg-background/80">
+        <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/25 px-3 py-2">
+          <p className="truncate text-xs font-medium text-foreground">{filenameFromKey(ev.object_key)}</p>
+          {forensicsByEvidenceId.has(ev.id) && (
+            <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium', verdict.className)}>
+              {verdict.label}
+            </span>
+          )}
+        </div>
+        {isImage ? (
+          <div className="bg-muted/20 p-3">
+            <ImagePreview src={ev.file_url} alt={ev.object_key} className="h-36 w-full" />
+          </div>
+        ) : (
+          <a href={ev.file_url} target="_blank" rel="noreferrer"
+            className="flex items-center gap-3 p-3 text-sm font-medium text-primary hover:underline">
+            <FileText className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">{filenameFromKey(ev.object_key)}</span>
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  const headerColor = role === 'buyer' ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+
+  return (
+    <div className="flex flex-1 min-w-0 flex-col rounded-xl border border-border overflow-hidden">
+      <div className={cn('flex items-center gap-2 border-b px-4 py-2.5 text-xs font-semibold uppercase tracking-wider', headerColor)}>
+        <span>{label}</span>
+        <span className="ml-auto opacity-60">{channelMessages.length} messages</span>
+      </div>
+      <div className="max-h-[600px] flex-1 space-y-3 overflow-y-auto bg-muted/10 p-3">
+        {channelMessages.length === 0 ? (
+          <p className="py-8 text-center text-xs text-muted-foreground">No messages in this channel yet.</p>
+        ) : (
+          channelMessages.map((msg) => {
+            const attached = evidenceByMessage.get(msg.id) ?? []
+            const isMediator = msg.sender_id === mediatorId
+            return (
+              <article key={msg.id} className={cn('flex gap-2', isMediator && 'flex-row-reverse')}>
+                <div className={cn(
+                  'mt-4 flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+                  isMediator ? 'bg-violet-100 text-violet-800' : roleBadgeClass(msg.sender_role),
+                )}>
+                  {initials(msg.sender_name)}
+                </div>
+                <div className={cn('min-w-0 max-w-[85%] space-y-1')}>
+                  <div className={cn('flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground', isMediator && 'justify-end')}>
+                    <span className="font-semibold text-foreground">{msg.sender_name || 'Unknown'}</span>
+                    {msg.sender_role && (
+                      <span className={cn('rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase', roleBadgeClass(msg.sender_role))}>
+                        {msg.sender_role}
+                      </span>
+                    )}
+                    <span>{formatDateTime(msg.created_at)}</span>
+                  </div>
+                  <div className={cn(
+                    'rounded-2xl border px-3 py-2 text-xs leading-relaxed shadow-sm whitespace-pre-wrap',
+                    isMediator
+                      ? 'rounded-tr-md border-primary/20 bg-primary text-primary-foreground'
+                      : 'rounded-tl-md border-border bg-card text-foreground',
+                  )}>
+                    {msg.message}
+                  </div>
+                  {attached.length > 0 && (
+                    <div className="grid gap-2 pt-1 sm:grid-cols-1">
+                      {attached.map((ev) => <EvidenceAttachment key={ev.id} ev={ev} />)}
+                    </div>
+                  )}
+                </div>
+              </article>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ThreadSnapshotChat({
   data,
   forensicsData,
@@ -326,160 +458,54 @@ function ThreadSnapshotChat({
   }
   if (errorMessage) return <p className="text-sm text-destructive">{errorMessage}</p>
 
-  const payload = data as { messages?: ThreadMessage[]; evidence?: ThreadEvidence[] } | null
+  const payload = data as {
+    messages?: (ThreadMessage & { recipient_id?: string | null })[]
+    evidence?: ThreadEvidence[]
+    participants?: { user_id: string; role: string }[]
+  } | null
   const forensicsPayload = forensicsData as ForensicsResponse | null
-  const messages = [...(payload?.messages ?? [])].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  )
+  const messages = [...(payload?.messages ?? [])]
   const evidence = payload?.evidence ?? []
-  const forensicsByEvidenceId = new Map(
-    (forensicsPayload?.evidence_results ?? []).map((result) => [result.evidence_id, result]),
-  )
+  const participants = payload?.participants ?? []
 
   if (messages.length === 0 && evidence.length === 0) {
     return <p className="text-sm text-muted-foreground">No thread data available.</p>
   }
 
-  const evidenceByMessage = new Map<string, ThreadEvidence[]>()
-  const orphanedEvidence: ThreadEvidence[] = []
-  evidence.forEach((ev) => {
-    if (!ev.message_id) {
-      orphanedEvidence.push(ev)
-      return
-    }
-    evidenceByMessage.set(ev.message_id, [...(evidenceByMessage.get(ev.message_id) ?? []), ev])
-  })
+  // Determine party IDs from participant list
+  const buyerParticipant = participants.find((p) => p.role === 'buyer')
+  const sellerParticipant = participants.find((p) => p.role === 'seller')
+  const mediatorParticipant = participants.find((p) => p.role === 'mediator' || p.role === 'moderator')
 
-  const initials = (name: string | null) =>
-    (name || '?')
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-
-  const EvidenceAttachment = ({ ev }: { ev: ThreadEvidence }) => {
-    const isImage = ev.file_type?.startsWith('image/')
-    const verdict = getEvidenceVerdict(forensicsByEvidenceId.get(ev.id))
-    return (
-      <div className="overflow-hidden rounded-lg border border-border bg-background/80">
-        <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/25 px-3 py-2">
-          <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-foreground">{filenameFromKey(ev.object_key)}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {ev.uploaded_by_name || 'Unknown'} {ev.uploaded_by_role ? `- ${ev.uploaded_by_role}` : ''}
-            </p>
-          </div>
-          {(ev.is_tampered || forensicsByEvidenceId.has(ev.id)) && (
-            <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium', verdict.className)}>
-              {verdict.label}
-            </span>
-          )}
-        </div>
-        {isImage ? (
-          <div className="bg-muted/20 p-3">
-            <ImagePreview
-              src={ev.file_url}
-              alt={ev.object_key}
-              className="h-48 w-full"
-              emptyLabel="Evidence image could not be displayed"
-            />
-          </div>
-        ) : (
-          <a
-            href={ev.file_url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 p-3 text-sm font-medium text-primary hover:underline"
-          >
-            <FileText className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">{filenameFromKey(ev.object_key)}</span>
-          </a>
-        )}
-      </div>
-    )
-  }
+  const buyerId = buyerParticipant?.user_id ?? null
+  const sellerId = sellerParticipant?.user_id ?? null
+  const mediatorId = mediatorParticipant?.user_id ?? null
 
   return (
-    <div className="max-h-[min(72vh,720px)] space-y-4 overflow-auto rounded-xl bg-muted/20 p-4">
-      {messages.map((msg) => {
-        const attached = evidenceByMessage.get(msg.id) ?? []
-        const role = msg.sender_role?.toLowerCase() ?? ''
-        const isRight = role === 'seller' || role === 'moderator' || role === 'admin'
-        const isSystem = msg.message_type !== 'text'
-        return (
-          <article
-            key={msg.id}
-            className={cn(
-              'flex gap-3',
-              isRight && 'flex-row-reverse',
-              isSystem && 'justify-center',
-            )}
-          >
-            <div
-              className={cn(
-                'mt-5 flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                roleBadgeClass(msg.sender_role),
-                isSystem && 'hidden',
-              )}
-            >
-              {initials(msg.sender_name)}
-            </div>
-            <div className={cn('min-w-0 max-w-[82%] space-y-1.5', isSystem && 'max-w-full')}>
-              <div className={cn('flex flex-wrap items-center gap-x-2 gap-y-1', isRight && 'justify-end')}>
-                <span className="text-xs font-semibold text-foreground">{msg.sender_name || 'Unknown'}</span>
-                {msg.sender_role && (
-                  <span
-                    className={cn(
-                      'rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide',
-                      roleBadgeClass(msg.sender_role),
-                    )}
-                  >
-                    {msg.sender_role}
-                  </span>
-                )}
-                <span className="text-[11px] text-muted-foreground">{formatDateTime(msg.created_at)}</span>
-              </div>
-              {msg.reply_to_message && (
-                <div className="rounded-md border border-border/70 bg-muted/25 px-3 py-2 text-xs text-muted-foreground">
-                  <p className="line-clamp-2">{msg.reply_to_message.text}</p>
-                </div>
-              )}
-              <div
-                className={cn(
-                  'rounded-2xl border px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap',
-                  isRight
-                    ? 'rounded-tr-md border-primary/20 bg-primary text-primary-foreground'
-                    : 'rounded-tl-md border-border bg-card text-foreground',
-                  isSystem && 'rounded-xl bg-muted text-muted-foreground',
-                )}
-              >
-                {msg.message}
-              </div>
-              {attached.length > 0 && (
-                <div className="grid gap-3 pt-1 sm:grid-cols-2">
-                  {attached.map((ev) => (
-                    <EvidenceAttachment key={ev.id} ev={ev} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </article>
-        )
-      })}
-
-      {orphanedEvidence.length > 0 && (
-        <div className="space-y-3 border-t border-border pt-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Evidence without linked message
-          </h4>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {orphanedEvidence.map((ev) => (
-              <EvidenceAttachment key={ev.id} ev={ev} />
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Messages are split by private channel. Each side only sees its own conversation with the moderator.
+      </p>
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <PartyChannelChat
+          label="Buyer channel"
+          role="buyer"
+          partyId={buyerId}
+          mediatorId={mediatorId}
+          messages={messages}
+          evidence={evidence}
+          forensicsData={forensicsPayload}
+        />
+        <PartyChannelChat
+          label="Seller channel"
+          role="seller"
+          partyId={sellerId}
+          mediatorId={mediatorId}
+          messages={messages}
+          evidence={evidence}
+          forensicsData={forensicsPayload}
+        />
+      </div>
     </div>
   )
 }

@@ -129,6 +129,7 @@ export async function postDisputeMessage(
     message: string;
     message_type?: string;
     reply_to_message_id?: string | null;
+    recipient_id?: string | null;
   },
 ): Promise<DisputeMessageRow> {
   const res = await fetch(

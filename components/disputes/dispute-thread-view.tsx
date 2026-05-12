@@ -179,10 +179,15 @@ export function DisputeThreadView(props: {
       });
       if (!parsed.success)
         throw new Error(parsed.error.issues[0]?.message ?? "Invalid message");
-      return postDisputeMessage(accessToken, disputeId, parsed.data);
+      // Automatically route to the assigned mediator when one exists.
+      const mediatorId = dispute?.assigned_mediator_id ?? null;
+      return postDisputeMessage(accessToken, disputeId, {
+        ...parsed.data,
+        recipient_id: mediatorId,
+      });
     },
     onSuccess: async () => {
-      toast.success("Message posted");
+      toast.success("Message sent to moderator");
       setMessageDraft("");
       setReplyTo(null);
       await invalidateDisputeQueries();
@@ -456,11 +461,12 @@ export function DisputeThreadView(props: {
                     className="size-4 text-muted-foreground"
                     aria-hidden
                   />
-                  Messages
+                  Your conversation with the moderator
                 </CardTitle>
                 <CardDescription>
-                  Negotiate in writing. Settlement still requires an explicit
-                  propose + confirm handshake.
+                  Messages here are private between you and the assigned
+                  moderator. The other party cannot see what you write here.
+                  Present your case clearly and attach supporting evidence.
                 </CardDescription>
               </CardHeader>
               <CardContent className="max-h-[min(520px,60vh)] space-y-3 overflow-y-auto py-6">
@@ -603,6 +609,18 @@ export function DisputeThreadView(props: {
             </Card>
 
             <div className="space-y-8">
+              {/* Waiting-for-mediator notice */}
+              {!dispute.assigned_mediator_id && (
+                <Alert>
+                  <AlertTitle>Awaiting moderator assignment</AlertTitle>
+                  <AlertDescription>
+                    A platform moderator will be assigned shortly. You can
+                    submit evidence now — they will review everything when they
+                    join the case.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -646,8 +664,9 @@ export function DisputeThreadView(props: {
                     Evidence
                   </CardTitle>
                   <CardDescription>
-                    Upload a file to receive an object key, then it is
-                    registered on the dispute.
+                   Upload a file as evidence for the moderator to review.
+                  Accepted formats: images, PDF. All evidence is private to this
+                  case and visible only to you and the moderator.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 py-6">

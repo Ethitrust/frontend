@@ -39,6 +39,7 @@ export type DisputeMessageRow = {
   id: string
   dispute_id?: string | null
   sender_id?: string | null
+  recipient_id?: string | null
   reply_to_message_id?: string | null
   reply_to_message?: DisputeMessageReplyPreview | null
   message_type?: string | null
