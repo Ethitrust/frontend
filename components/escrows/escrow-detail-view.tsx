@@ -64,7 +64,12 @@ import {
   type EscrowAction,
 } from "@/lib/escrows/me-escrows-api";
 // import { EscrowSettlementNegotiation } from "./escrow-settlement-negotiation";
-import type { EscrowRow, MilestoneRow, EscrowEventRow, EscrowMessageRow } from "@/lib/escrows/escrow-list-types";
+import type {
+  EscrowRow,
+  MilestoneRow,
+  EscrowEventRow,
+  EscrowMessageRow,
+} from "@/lib/escrows/escrow-list-types";
 import {
   formatEscrowDate,
   formatEscrowDateTime,
@@ -854,7 +859,7 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
     queryFn: () => fetchMeEscrowMilestones(accessToken!, escrowId),
     enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
   });
-  
+
   const eventsQuery = useQuery({
     queryKey: ["me", "escrows", escrowId, "events"],
     queryFn: () => fetchMeEscrowEvents(accessToken!, escrowId),
@@ -877,6 +882,12 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
       );
       return row?.id ?? null;
     },
+    enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
+  });
+
+  const adjustmentsQuery = useQuery({
+    queryKey: ["me", "escrows", escrowId, "adjustments"],
+    queryFn: () => fetchMeEscrowAdjustments(accessToken!, escrowId),
     enabled: Boolean(accessToken && escrowId && escrowQuery.isSuccess),
   });
 
@@ -1010,12 +1021,6 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
       </div>
     );
   }
-
-  const adjustmentsQuery = useQuery({
-    queryKey: ["me", "escrows", escrowId, "adjustments"],
-    queryFn: () => fetchMeEscrowAdjustments(accessToken!, escrowId),
-    enabled: !!accessToken,
-  });
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -1415,10 +1420,14 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                       .reverse()
                       .map((event) => (
                         <div key={event.id} className="relative pl-7">
-                          <div className={cn(
-                            "absolute left-0 top-1.5 size-[24px] rounded-full border-4 border-background ring-1 ring-border flex items-center justify-center bg-card",
-                            event.event_type === "countered" ? "bg-amber-100 ring-amber-200" : ""
-                          )}>
+                          <div
+                            className={cn(
+                              "absolute left-0 top-1.5 size-[24px] rounded-full border-4 border-background ring-1 ring-border flex items-center justify-center bg-card",
+                              event.event_type === "countered"
+                                ? "bg-amber-100 ring-amber-200"
+                                : "",
+                            )}
+                          >
                             {event.event_type === "countered" ? (
                               <MessageSquare className="size-2.5 text-amber-600" />
                             ) : event.event_type === "submitted" ? (
@@ -1470,7 +1479,10 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
             <Card className="shadow-sm flex flex-col h-[500px]">
               <CardHeader className="border-b py-3">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <MessageSquare className="size-4 text-muted-foreground" aria-hidden />
+                  <MessageSquare
+                    className="size-4 text-muted-foreground"
+                    aria-hidden
+                  />
                   Chat
                 </CardTitle>
               </CardHeader>
@@ -1484,7 +1496,9 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
                     <MessageSquare className="size-8 mb-2 opacity-20" />
                     <p className="text-sm">No messages yet.</p>
-                    <p className="text-xs">Send a message to start discussing the deal.</p>
+                    <p className="text-xs">
+                      Send a message to start discussing the deal.
+                    </p>
                   </div>
                 ) : (
                   (messagesQuery.data ?? []).map((msg) => {
@@ -1494,7 +1508,9 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                         key={msg.id}
                         className={cn(
                           "flex flex-col max-w-[85%]",
-                          isMe ? "self-end items-end" : "self-start items-start"
+                          isMe
+                            ? "self-end items-end"
+                            : "self-start items-start",
                         )}
                       >
                         <div
@@ -1502,7 +1518,7 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                             "rounded-2xl px-3 py-2 text-sm",
                             isMe
                               ? "bg-primary text-primary-foreground rounded-tr-none"
-                              : "bg-muted text-foreground rounded-tl-none"
+                              : "bg-muted text-foreground rounded-tl-none",
                           )}
                         >
                           {msg.message}
@@ -1520,14 +1536,20 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                   onSubmit={(e) => {
                     e.preventDefault();
                     const form = e.currentTarget;
-                    const input = form.elements.namedItem("chat-input") as HTMLInputElement;
+                    const input = form.elements.namedItem(
+                      "chat-input",
+                    ) as HTMLInputElement;
                     if (!input.value.trim()) return;
-                    
+
                     const text = input.value.trim();
                     input.value = "";
-                    
+
                     postMeEscrowMessage(accessToken!, escrowId, text)
-                      .then(() => qc.invalidateQueries({ queryKey: ["me", "escrows", escrowId, "messages"] }))
+                      .then(() =>
+                        qc.invalidateQueries({
+                          queryKey: ["me", "escrows", escrowId, "messages"],
+                        }),
+                      )
                       .catch((err) => toast.error(err.message));
                   }}
                   className="flex gap-2"
@@ -1538,7 +1560,11 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                     className="flex-1 bg-background border border-input rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     autoComplete="off"
                   />
-                  <Button type="submit" size="icon" className="rounded-full shrink-0">
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="rounded-full shrink-0"
+                  >
                     <Send className="size-4" />
                   </Button>
                 </form>
