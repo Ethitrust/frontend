@@ -63,7 +63,7 @@ import {
   fetchMeEscrowAdjustments,
   type EscrowAction,
 } from "@/lib/escrows/me-escrows-api";
-import { EscrowSettlementNegotiation } from "./escrow-settlement-negotiation";
+// import { EscrowSettlementNegotiation } from "./escrow-settlement-negotiation";
 import type { EscrowRow, MilestoneRow, EscrowEventRow, EscrowMessageRow } from "@/lib/escrows/escrow-list-types";
 import {
   formatEscrowDate,
@@ -1464,13 +1464,7 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
               />
             ) : null}
 
-            {/* Settlement Negotiation */}
-            <EscrowSettlementNegotiation
-              accessToken={accessToken!}
-              escrow={escrow}
-              adjustments={adjustmentsQuery.data ?? []}
-              currentUserId={viewerId}
-            />
+            {/* Settlement Negotiation removed for debugging */}
 
             {/* Real-time Chat */}
             <Card className="shadow-sm flex flex-col h-[500px]">
