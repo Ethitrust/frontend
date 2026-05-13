@@ -63,19 +63,11 @@ import {
   fetchMeDisputeThread,
   postDisputeCancel,
   postDisputeEvidence,
-  postDisputeEvidenceUpload,
   postDisputeMessage,
-  postSettlementConfirm,
-  postSettlementPropose,
 } from "@/lib/disputes/me-disputes-api";
 import { ethitrustThemeTokens } from "@/lib/ethitrust-theme";
 import { disputeEvidenceDescriptionSchema } from "@/lib/validators/dispute-evidence";
 import { disputeMessageSchema } from "@/lib/validators/dispute-message";
-import {
-  settlementConfirmSchema,
-  settlementProposeSchema,
-  settlementResolutionOutcomes,
-} from "@/lib/validators/dispute-settlement";
 import { cn } from "@/lib/utils";
 
 function disputeLooksTerminal(status?: string | null): boolean {
@@ -156,15 +148,6 @@ export function DisputeThreadView(props: {
   const [messageDraft, setMessageDraft] = useState("");
   const [replyTo, setReplyTo] = useState<DisputeMessageRow | null>(null);
 
-  const [proposeOpen, setProposeOpen] = useState(false);
-  const [resolutionOutcome, setResolutionOutcome] = useState<string>(
-    settlementResolutionOutcomes[0]!,
-  );
-  const [proposeNote, setProposeNote] = useState("");
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmNote, setConfirmNote] = useState("");
-
   const [evidenceDescription, setEvidenceDescription] = useState("");
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
 
@@ -199,49 +182,6 @@ export function DisputeThreadView(props: {
     mutationFn: () => postDisputeCancel(accessToken, disputeId),
     onSuccess: async () => {
       toast.success("Dispute cancelled");
-      await invalidateDisputeQueries();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const proposeMutation = useMutation({
-    mutationFn: () => {
-      const parsed = settlementProposeSchema.safeParse({
-        resolution_outcome: resolutionOutcome,
-        note: proposeNote.trim() ? proposeNote : null,
-      });
-      if (!parsed.success)
-        throw new Error(parsed.error.issues[0]?.message ?? "Invalid proposal");
-      return postSettlementPropose(accessToken, disputeId, {
-        resolution_outcome: parsed.data.resolution_outcome,
-        note: parsed.data.note ?? undefined,
-      });
-    },
-    onSuccess: async () => {
-      toast.success("Settlement proposed — the other party can confirm.");
-      setProposeOpen(false);
-      setProposeNote("");
-      await invalidateDisputeQueries();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const confirmMutation = useMutation({
-    mutationFn: () => {
-      const trimmed = confirmNote.trim();
-      const parsed = settlementConfirmSchema.safeParse({
-        note: trimmed ? trimmed : null,
-      });
-      if (!parsed.success)
-        throw new Error(parsed.error.issues[0]?.message ?? "Invalid note");
-      return postSettlementConfirm(accessToken, disputeId, {
-        note: parsed.data.note ?? undefined,
-      });
-    },
-    onSuccess: async () => {
-      toast.success("Settlement confirmed");
-      setConfirmOpen(false);
-      setConfirmNote("");
       await invalidateDisputeQueries();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -285,25 +225,6 @@ export function DisputeThreadView(props: {
     e.preventDefault();
     evidenceMutation.mutate();
   }
-
-  const canNegotiateActions = dispute && !terminal;
-  const canProposeSettlement = Boolean(
-    canNegotiateActions && !settlementPendingStatus,
-  );
-
-  const amSettlementProposer = Boolean(
-    me?.id &&
-    dispute?.settlement_requested_by &&
-    me.id === dispute.settlement_requested_by,
-  );
-
-  const canShowConfirmSettlementButton =
-    settlementPendingStatus &&
-    Boolean(
-      me?.id &&
-      dispute?.settlement_requested_by &&
-      me.id !== dispute.settlement_requested_by,
-    );
 
   const err =
     (disputeQuery.error as Error | undefined)?.message ??
@@ -377,7 +298,7 @@ export function DisputeThreadView(props: {
                   </Link>
                 </Button>
               ) : null}
-              {terminal ? null : (
+              {(!terminal && me?.id && dispute?.raised_by && me.id === dispute.raised_by) ? (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -403,9 +324,7 @@ export function DisputeThreadView(props: {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Cancel this dispute?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This stops the negotiation for your side. The server may
-                        reject cancellation when a settlement is already pending
-                        or funds are already moving.
+                        This will cancel the dispute and return the escrow to an active state. Only the party who raised the dispute can cancel it.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -419,36 +338,6 @@ export function DisputeThreadView(props: {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              )}
-              {canProposeSettlement ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  type="button"
-                  onClick={() => setProposeOpen(true)}
-                >
-                  Propose settlement
-                </Button>
-              ) : null}
-              {settlementPendingStatus && canShowConfirmSettlementButton ? (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="rounded-full"
-                  type="button"
-                  onClick={() => setConfirmOpen(true)}
-                >
-                  Confirm settlement
-                </Button>
-              ) : settlementPendingStatus && amSettlementProposer ? (
-                <Badge variant="secondary">
-                  Waiting for the other party to confirm your settlement
-                  proposal
-                </Badge>
-              ) : settlementPendingStatus &&
-                !dispute.settlement_requested_by ? (
-                <Badge variant="outline">Settlement pending</Badge>
               ) : null}
             </div>
           </header>
@@ -776,105 +665,6 @@ export function DisputeThreadView(props: {
         </>
       ) : null}
 
-      <Dialog open={proposeOpen} onOpenChange={setProposeOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Propose settlement</DialogTitle>
-            <DialogDescription>
-              You move the dispute to settlement pending. The other buyer or
-              seller must confirm before funds move.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label>Resolution outcome</Label>
-              <Select
-                value={resolutionOutcome}
-                onValueChange={setResolutionOutcome}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Outcome" />
-                </SelectTrigger>
-                <SelectContent>
-                  {settlementResolutionOutcomes.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="propose-note">Note (optional)</Label>
-              <Textarea
-                id="propose-note"
-                value={proposeNote}
-                onChange={(e) => setProposeNote(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setProposeOpen(false)}
-            >
-              Close
-            </Button>
-            <Button
-              type="button"
-              onClick={() => proposeMutation.mutate()}
-              disabled={proposeMutation.isPending}
-            >
-              {proposeMutation.isPending ? (
-                <Loader2Icon className="size-4 animate-spin" aria-hidden />
-              ) : (
-                "Submit proposal"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm settlement</DialogTitle>
-            <DialogDescription>
-              You are accepting the outcome proposed by the other party and
-              authorizing escrow release once the server validates your role.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-2 py-2">
-            <Label htmlFor="confirm-note">Note (optional)</Label>
-            <Textarea
-              id="confirm-note"
-              value={confirmNote}
-              onChange={(e) => setConfirmNote(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setConfirmOpen(false)}
-            >
-              Close
-            </Button>
-            <Button
-              type="button"
-              onClick={() => confirmMutation.mutate()}
-              disabled={confirmMutation.isPending}
-            >
-              {confirmMutation.isPending ? (
-                <Loader2Icon className="size-4 animate-spin" aria-hidden />
-              ) : (
-                "Confirm and execute"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
