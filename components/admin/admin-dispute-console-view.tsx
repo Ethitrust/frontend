@@ -48,11 +48,9 @@ import {
   fetchAdminDisputeThread,
   postAdminDisputeAction,
   postAdminDisputeAssignMediator,
-  postAdminDisputeEvidenceTamper,
   postAdminDisputeResolutionNote,
   fetchAdminDisputeForensics,
   postAdminDisputeAnalyzeChat,
-  postAdminEvidenceRerunEla,
   fetchAdminDisputeDetail,
   fetchAdminEscrowMessages,
   postAdminDisputeMessage,
@@ -105,73 +103,6 @@ type ChatAnalysesResponse = {
   analyses?: ChatAnalysisItem[] | null;
   total?: number | null;
 };
-
-/** Best-effort extraction of evidence identifiers from the thread payload. */
-function extractEvidenceOptions(
-  threadData: unknown,
-): { id: string; label: string }[] {
-  if (!threadData || typeof threadData !== "object") return [];
-  const data = threadData as Record<string, unknown>;
-
-  const fromArray = (arr: unknown[]) =>
-    arr
-      .map((ev) => {
-        if (typeof ev === "string") return { id: ev, label: ev };
-        if (!ev || typeof ev !== "object") return null;
-        const e = ev as Record<string, unknown>;
-        const id = String(e.evidence_id ?? e.id ?? e.evidenceId ?? "");
-        if (!id) return null;
-        const name = String(
-          e.filename ??
-            e.file_name ??
-            e.object_key ??
-            e.type ??
-            e.label ??
-            e.name ??
-            "",
-        );
-        return {
-          id,
-          label:
-            name && name !== id
-              ? `${filenameFromKey(name)} (${id.slice(0, 8)}...)`
-              : id,
-        };
-      })
-      .filter((x): x is { id: string; label: string } => Boolean(x && x.id));
-
-  if (Array.isArray(data.evidence)) return fromArray(data.evidence);
-  if (Array.isArray(data.evidence_items)) return fromArray(data.evidence_items);
-  if (Array.isArray(data.evidence_ids)) {
-    return data.evidence_ids
-      .filter((id): id is string => typeof id === "string")
-      .map((id) => ({ id, label: id }));
-  }
-
-  if (Array.isArray(data.messages)) {
-    const ids = new Set<string>();
-    data.messages.forEach((msg) => {
-      if (!msg || typeof msg !== "object") return;
-      const m = msg as Record<string, unknown>;
-      const evId = String(m.evidence_id ?? m.evidenceId ?? "");
-      if (evId) ids.add(evId);
-      const attachments = m.attachments ?? m.evidence;
-      if (Array.isArray(attachments)) {
-        attachments.forEach((att) => {
-          if (typeof att === "string") ids.add(att);
-          else if (att && typeof att === "object") {
-            const a = att as Record<string, unknown>;
-            const id = String(a.evidence_id ?? a.id ?? a.evidenceId ?? "");
-            if (id) ids.add(id);
-          }
-        });
-      }
-    });
-    return Array.from(ids).map((id) => ({ id, label: id }));
-  }
-
-  return [];
-}
 
 function filenameFromKey(key: string) {
   return key.split("/").pop() || key;
@@ -484,9 +415,9 @@ function PartyChannelChat({
         message: draft.trim(),
         recipient_id: partyId,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
       setDraft("");
-      void qc.invalidateQueries({
+      await qc.invalidateQueries({
         queryKey: ["admin", "disputes", disputeId, "thread"],
       });
     },
@@ -748,13 +679,12 @@ function ThreadSnapshotChat({
   // Determine party IDs from participant list
   const buyerParticipant = participants.find((p) => p.role === "buyer");
   const sellerParticipant = participants.find((p) => p.role === "seller");
-  const mediatorParticipant = participants.find(
-    (p) => p.role === "mediator" || p.role === "moderator",
-  );
 
   const buyerId = buyerParticipant?.user_id ?? null;
   const sellerId = sellerParticipant?.user_id ?? null;
-  const mediatorId = mediatorParticipant?.user_id ?? null;
+  
+  // Use the current logged-in user as the mediator ID
+  const mediatorId = (payload as any)?.currentUserId ?? null;
 
   const accessToken = (payload as any)?.accessToken ?? "";
   const disputeId = (payload as any)?.disputeId ?? "";
@@ -1287,9 +1217,11 @@ function CaseSummaryCard({
 export function AdminDisputeConsoleView({
   accessToken,
   disputeId,
+  currentUserId,
 }: {
   accessToken: string;
   disputeId: string;
+  currentUserId: string;
 }) {
   const e = ethitrustThemeTokens;
   const qc = useQueryClient();
@@ -1329,9 +1261,6 @@ export function AdminDisputeConsoleView({
   const [resolutionNote, setResolutionNote] = useState("");
   const [disputeAction, setDisputeAction] = useState("escalate");
   const [disputeActionNote, setDisputeActionNote] = useState("");
-  const [evidenceId, setEvidenceId] = useState("");
-  const [evidenceTampered, setEvidenceTampered] = useState(true);
-  const [evidenceMetaJson, setEvidenceMetaJson] = useState("{}");
 
   const invalidateThread = () => {
     void qc.invalidateQueries({
@@ -1391,44 +1320,11 @@ export function AdminDisputeConsoleView({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const tamperMutation = useMutation({
-    mutationFn: () => {
-      let metadata: Record<string, unknown> | undefined;
-      try {
-        const parsed = JSON.parse(evidenceMetaJson || "{}") as unknown;
-        metadata =
-          typeof parsed === "object" && parsed !== null
-            ? (parsed as Record<string, unknown>)
-            : {};
-      } catch {
-        throw new Error("Evidence metadata must be valid JSON");
-      }
-      return postAdminDisputeEvidenceTamper(accessToken, evidenceId.trim(), {
-        is_tampered: evidenceTampered,
-        metadata,
-      });
-    },
-    onSuccess: () => {
-      toast.success("Evidence tamper flag recorded");
-      invalidateThread();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const analyzeChatMutation = useMutation({
     mutationFn: () => postAdminDisputeAnalyzeChat(accessToken, disputeId),
     onSuccess: () => {
       toast.success("Chat analysis complete");
       invalidateAnalyses();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const rerunElaMutation = useMutation({
-    mutationFn: () => postAdminEvidenceRerunEla(accessToken, evidenceId.trim()),
-    onSuccess: () => {
-      toast.success("ELA analysis queued");
-      invalidateForensics();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -1481,6 +1377,7 @@ export function AdminDisputeConsoleView({
                         ...(threadQuery.data as any),
                         accessToken,
                         disputeId,
+                        currentUserId,
                       }
                     : null
                 }
@@ -1683,105 +1580,6 @@ export function AdminDisputeConsoleView({
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                Evidence integrity
-              </CardTitle>
-              <CardDescription>
-                Select evidence from the thread, then update disposition or
-                re-run ELA.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(() => {
-                const evidenceOptions = extractEvidenceOptions(
-                  threadQuery.data,
-                );
-                if (threadQuery.isPending) {
-                  return <Skeleton className="h-9 w-full" />;
-                }
-                if (evidenceOptions.length > 0) {
-                  return (
-                    <div className="space-y-2">
-                      <Label>Evidence</Label>
-                      <Select value={evidenceId} onValueChange={setEvidenceId}>
-                        <SelectTrigger
-                          size="sm"
-                          className="w-full cursor-pointer"
-                        >
-                          <SelectValue placeholder="Choose evidence" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {evidenceOptions.map((option) => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  );
-                }
-                return (
-                  <div className="space-y-2">
-                    <Label htmlFor="ev-id">Evidence id</Label>
-                    <Input
-                      id="ev-id"
-                      value={evidenceId}
-                      onChange={(ev) => setEvidenceId(ev.target.value)}
-                      placeholder="UUID"
-                    />
-                  </div>
-                );
-              })()}
-
-              <div className="flex items-center gap-2">
-                <input
-                  id="ev-tamp"
-                  type="checkbox"
-                  className="size-4 rounded border border-input"
-                  checked={evidenceTampered}
-                  onChange={(ev) => setEvidenceTampered(ev.target.checked)}
-                />
-                <Label htmlFor="ev-tamp">Mark as tampered</Label>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ev-meta">Metadata JSON</Label>
-                <Textarea
-                  id="ev-meta"
-                  rows={4}
-                  value={evidenceMetaJson}
-                  onChange={(ev) => setEvidenceMetaJson(ev.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!evidenceId.trim() || tamperMutation.isPending}
-                  onClick={() => tamperMutation.mutate()}
-                >
-                  Submit evidence update
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!evidenceId.trim() || rerunElaMutation.isPending}
-                  onClick={() => rerunElaMutation.mutate()}
-                >
-                  Re-run ELA forensics
-                </Button>
-              </div>
-              <Alert>
-                <AlertTitle>Review cue</AlertTitle>
-                <AlertDescription className="text-xs">
-                  Use the visual panel before marking evidence so the audit
-                  record matches the reviewed artifact.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
         </aside>
       </div>
     </div>

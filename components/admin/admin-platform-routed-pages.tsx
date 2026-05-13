@@ -37,7 +37,7 @@ export function AdminDisputesRoutedPage() {
 export function AdminDisputeConsoleRoutedPage({ disputeId }: { disputeId: string }) {
   return (
     <AdminOperatorGate>
-      {({ accessToken }) => <AdminDisputeConsoleView accessToken={accessToken} disputeId={disputeId} />}
+      {({ accessToken, me }) => <AdminDisputeConsoleView accessToken={accessToken} disputeId={disputeId} currentUserId={me.id} />}
     </AdminOperatorGate>
   )
 }
