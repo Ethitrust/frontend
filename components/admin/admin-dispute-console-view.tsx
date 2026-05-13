@@ -166,21 +166,25 @@ function getEvidenceVerdict(result?: Pick<ForensicsEvidenceResult, 'ela_score' |
       className: 'bg-red-100 text-red-700',
     }
   }
-  if (result.is_tampered || (result.ela_score ?? 0) >= 0.6) {
+  // With top-1% mean scoring, values are higher but more focused.
+  // Backend auto-flags is_tampered at > 40.0.
+  const score = result.ela_score ?? 0
+  
+  if (result.is_tampered || score >= 40.0) {
     return {
       label: 'Definitely edited',
       detail: 'Strong pixel inconsistencies were detected. Review the highlighted heatmap area.',
       className: 'bg-red-100 text-red-700',
     }
   }
-  if ((result.ela_score ?? 0) >= 0.28) {
+  if (score >= 18.0) {
     return {
       label: 'Likely edited',
       detail: 'The heatmap shows suspicious compression differences that may indicate modification.',
       className: 'bg-amber-100 text-amber-800',
     }
   }
-  if ((result.ela_score ?? 0) >= 0.12) {
+  if (score >= 8.0) {
     return {
       label: 'Needs review',
       detail: 'Some artifacts were found, but they are not conclusive on their own.',
