@@ -749,22 +749,99 @@ function PreDisputeChatView({
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
+  // Group messages by sender to determine alternating sides
+  let lastSenderId: string | null = null;
+  const messagesWithSide = messages.map((m: any) => {
+    const isNewSender = m.sender_id !== lastSenderId;
+    lastSenderId = m.sender_id;
+    return { ...m, isNewSender };
+  });
+
+  // Determine which sender should be on the right (use first sender as left)
+  const firstSenderId = messages[0]?.sender_id;
+
+  const initials = (name: string | null) =>
+    (name || "?")
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
   return (
-    <div className="max-h-[500px] overflow-y-auto space-y-4 rounded-xl border border-border bg-muted/5 p-4">
-      {messages.map((m: any) => (
-        <div key={m.id} className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span className="font-semibold text-foreground">{m.sender_name || "User"}</span>
-            <Badge variant="outline" className="scale-75 origin-left h-4 px-1 capitalize">
-              {m.sender_role || "participant"}
-            </Badge>
-            <span>{formatDateTime(m.created_at)}</span>
-          </div>
-          <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm leading-relaxed whitespace-pre-wrap">
-            {m.message}
-          </div>
-        </div>
-      ))}
+    <div className="flex flex-col rounded-xl border border-border bg-gradient-to-b from-muted/30 to-muted/10 overflow-hidden">
+      {/* Chat header */}
+      <div className="border-b border-border bg-card/50 px-4 py-3 backdrop-blur-sm">
+        <p className="text-xs font-medium text-muted-foreground">
+          The original conversation between parties before the dispute was raised.
+        </p>
+      </div>
+
+      {/* Chat messages - scrollable */}
+      <div className="flex-1 max-h-[600px] overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {messagesWithSide.map((m: any) => {
+          const isRight = m.sender_id !== firstSenderId;
+          const senderColor = isRight ? "bg-emerald-600" : "bg-sky-600";
+          
+          return (
+            <div
+              key={m.id}
+              className={cn(
+                "flex gap-3 group",
+                isRight && "flex-row-reverse"
+              )}
+            >
+              {/* Avatar */}
+              <div
+                className={cn(
+                  "mt-1 flex size-9 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm transition-transform group-hover:scale-110",
+                  senderColor
+                )}
+              >
+                {initials(m.sender_name)}
+              </div>
+
+              {/* Message bubble */}
+              <div className={cn("min-w-0 max-w-[75%] space-y-1")}>
+                {/* Sender info */}
+                <div
+                  className={cn(
+                    "flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground",
+                    isRight && "justify-end"
+                  )}
+                >
+                  <span className="font-semibold text-foreground">
+                    {m.sender_name || "User"}
+                  </span>
+                  <Badge variant="outline" className="h-4 px-1.5 text-[9px] capitalize">
+                    {m.sender_role || "participant"}
+                  </Badge>
+                  <span className="opacity-70">{formatDateTime(m.created_at)}</span>
+                </div>
+
+                {/* Message content */}
+                <div
+                  className={cn(
+                    "rounded-2xl border px-4 py-2.5 text-sm leading-relaxed shadow-sm whitespace-pre-wrap transition-colors",
+                    isRight
+                      ? "rounded-tr-none border-emerald-500/20 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-50"
+                      : "rounded-tl-none border-sky-500/20 bg-sky-50 text-sky-950 dark:bg-sky-950/30 dark:text-sky-50"
+                  )}
+                >
+                  {m.message}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Chat footer info */}
+      <div className="border-t border-border bg-card/50 px-4 py-2 backdrop-blur-sm">
+        <p className="text-[10px] text-muted-foreground">
+          {messages.length} message{messages.length !== 1 ? "s" : ""} • Read-only view
+        </p>
+      </div>
     </div>
   );
 }
