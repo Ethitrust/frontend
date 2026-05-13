@@ -76,7 +76,8 @@ export function EscrowSettlementNegotiation({
   const [date, setDate] = React.useState<string>('')
   const [note, setNote] = React.useState('')
 
-  const pendingAdjustment = adjustments.find((a) => a.status === 'pending')
+  const adjustmentsArr = Array.isArray(adjustments) ? adjustments : []
+  const pendingAdjustment = adjustmentsArr.find((a) => a.status === 'pending')
 
   const proposeMutation = useMutation({
     mutationFn: async () => {
@@ -146,7 +147,18 @@ export function EscrowSettlementNegotiation({
             {pendingAdjustment.adjustment_type === 'deadline_extension' && (
               <div className="flex justify-between items-center bg-background p-2 rounded border">
                 <span className="text-muted-foreground font-medium">New Deadline:</span>
-                <span className="font-bold">{pendingAdjustment.new_delivery_date ? format(new Date(pendingAdjustment.new_delivery_date), 'PPP') : 'N/A'}</span>
+                <span className="font-bold">
+                  {(() => {
+                    if (!pendingAdjustment.new_delivery_date) return 'N/A'
+                    try {
+                      const d = new Date(pendingAdjustment.new_delivery_date)
+                      if (isNaN(d.getTime())) return 'Invalid Date'
+                      return format(d, 'PPP')
+                    } catch {
+                      return 'Invalid Date'
+                    }
+                  })()}
+                </span>
               </div>
             )}
             {pendingAdjustment.note && (

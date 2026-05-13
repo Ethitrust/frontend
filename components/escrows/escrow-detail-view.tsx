@@ -1000,6 +1000,17 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
     );
   }
 
+  if (!escrowQuery.data) {
+    return (
+      <div className={cn(e.layout.container, "py-8 lg:py-12 text-center")}>
+        <p className="text-muted-foreground">Escrow data not found.</p>
+        <Button variant="outline" className="mt-4 rounded-full" asChild>
+          <Link href="/escrows">Return to list</Link>
+        </Button>
+      </div>
+    );
+  }
+
   const adjustmentsQuery = useQuery({
     queryKey: ["me", "escrows", escrowId, "adjustments"],
     queryFn: () => fetchMeEscrowAdjustments(accessToken!, escrowId),
