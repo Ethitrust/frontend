@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { ChatAnalysesView } from "@/components/admin/chat-analyses-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -25,7 +33,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { Reply, XIcon } from "lucide-react";
+import {
+  ExternalLink,
+  Reply,
+  RotateCcw,
+  XIcon,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import {
   fetchAdminDisputeThread,
   postAdminDisputeResolutionNote,
@@ -118,6 +133,192 @@ type ThreadMessage = {
   reply_to_message?: ThreadMessageReplyPreview | null;
 };
 
+type ChatAnalysisItem = {
+  id: string;
+  provider: string;
+  model: string;
+  status: string;
+  risk_level: string | null;
+  detected_intents: string[] | null;
+  flagged_messages: unknown[] | null;
+  summary: string | null;
+  recommendation: string | null;
+  error: string | null;
+  message_count_analyzed: number;
+  created_at: string;
+  completed_at: string | null;
+};
+
+type ChatAnalysesResponse = {
+  analyses?: ChatAnalysisItem[] | null;
+  total?: number | null;
+};
+
+function formatDateTime(iso: string | null | undefined) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  } catch {
+    return String(iso);
+  }
+}
+
+function normalizeRole(role: string | null | undefined) {
+  const r = (role || "").toLowerCase();
+  if (r === "buyer") return "buyer" as const;
+  if (r === "seller") return "seller" as const;
+  if (r === "moderator" || r === "mediator") return "moderator" as const;
+  if (r === "admin") return "admin" as const;
+  return "unknown" as const;
+}
+
+function roleLabel(role: string | null | undefined) {
+  const r = normalizeRole(role);
+  if (r === "buyer") return "Buyer";
+  if (r === "seller") return "Seller";
+  if (r === "moderator") return "Moderator";
+  if (r === "admin") return "Admin";
+  return role?.trim() ? role.trim() : "Unknown";
+}
+
+function latestCompletedAnalysis(data: unknown): ChatAnalysisItem | null {
+  const payload = data as ChatAnalysesResponse | null;
+  const analyses = payload?.analyses ?? [];
+  const completed = analyses
+    .filter((a) => (a.status || "").toLowerCase() === "completed" && !a.error)
+    .sort(
+      (a, b) =>
+        new Date(b.completed_at ?? b.created_at).getTime() -
+        new Date(a.completed_at ?? a.created_at).getTime(),
+    );
+  return completed[0] ?? null;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function ZoomableImage({
+  src,
+  alt,
+  label,
+  className,
+  triggerClassName,
+}: {
+  src: string;
+  alt: string;
+  label?: string;
+  className?: string;
+  triggerClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) setZoom(1);
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "group relative block w-full overflow-hidden rounded-lg border border-border bg-muted/10",
+          triggerClassName,
+        )}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className={cn("h-full w-full object-contain", className)}
+          loading="lazy"
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-background/80 px-2 py-1 text-[10px] text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+          <span className="truncate">{label || "Click to zoom"}</span>
+          <span className="inline-flex items-center gap-1">
+            <ZoomIn className="size-3" aria-hidden />
+            <span>Zoom</span>
+          </span>
+        </div>
+      </button>
+
+      <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>{label || "Image"}</DialogTitle>
+          <DialogDescription className="truncate">{alt}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setZoom((z) => clamp(z - 0.25, 0.5, 3))}
+            >
+              <ZoomOut className="size-4" aria-hidden />
+              Zoom out
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setZoom((z) => clamp(z + 0.25, 0.5, 3))}
+            >
+              <ZoomIn className="size-4" aria-hidden />
+              Zoom in
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => setZoom(1)}
+            >
+              <RotateCcw className="size-4" aria-hidden />
+              Reset
+            </Button>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {Math.round(zoom * 100)}%
+            </span>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            asChild
+          >
+            <a href={src} target="_blank" rel="noreferrer">
+              <ExternalLink className="size-4" aria-hidden />
+              Open original
+            </a>
+          </Button>
+        </div>
+
+        <div className="mt-3 h-[70vh] overflow-auto rounded-xl border border-border bg-muted/10 p-4">
+          <div className="flex min-h-full items-center justify-center">
+            <img
+              src={src}
+              alt={alt}
+              className="max-w-none select-none"
+              style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+              draggable={false}
+            />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type ThreadEvidence = {
   id: string;
   message_id: string | null;
@@ -191,12 +392,6 @@ function ThreadSnapshotChat({
     }
   });
 
-  const formatTime = (iso: string) =>
-    new Intl.DateTimeFormat("en-GB", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(iso));
-
   const initials = (name: string | null) =>
     (name || "?")
       .split(" ")
@@ -205,179 +400,192 @@ function ThreadSnapshotChat({
       .toUpperCase()
       .slice(0, 2);
 
-  const roleBadgeClass = (role: string | null) => {
-    switch (role?.toLowerCase()) {
-      case "buyer":
-        return "bg-blue-100 text-blue-800";
-      case "seller":
-        return "bg-emerald-100 text-emerald-800";
-      case "moderator":
-      case "admin":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-muted text-muted-foreground";
+  const filenameFromKey = (key: string) => key.split("/").pop() || key;
+
+  const evidenceMetaBadges = (ev: ThreadEvidence) => {
+    const badges: ReactNode[] = [];
+    if (ev.is_tampered) {
+      badges.push(
+        <Badge key="tampered" variant="destructive" className="rounded-full">
+          Tampered
+        </Badge>,
+      );
     }
+    if (ev.ela_status) {
+      badges.push(
+        <Badge key="ela" variant="secondary" className="rounded-full">
+          ELA: {ev.ela_status}
+        </Badge>,
+      );
+    }
+    if (ev.ela_score !== null && ev.ela_score !== undefined) {
+      badges.push(
+        <Badge key="score" variant="outline" className="rounded-full">
+          Score: {ev.ela_score}
+        </Badge>,
+      );
+    }
+    return badges;
+  };
+
+  const messageAlignClass = (role: string | null) => {
+    const r = normalizeRole(role);
+    if (r === "seller") return "justify-end";
+    if (r === "buyer") return "justify-start";
+    return "justify-center";
+  };
+
+  const bubbleClass = (role: string | null) => {
+    const r = normalizeRole(role);
+    if (r === "seller") return "bg-card border-border";
+    if (r === "buyer") return "bg-muted/25 border-border";
+    return "bg-background border-border border-dashed";
   };
 
   return (
-    <div className="max-h-[min(70vh,560px)] overflow-auto space-y-6 pr-2">
+    <div className="max-h-[min(72vh,640px)] overflow-auto space-y-4 rounded-xl border border-border bg-muted/10 p-4">
       {sortedMessages.map((msg) => {
         const attached = evidenceByMessage.get(msg.id) ?? [];
+        const r = normalizeRole(msg.sender_role);
+        const align = messageAlignClass(msg.sender_role);
+        const roleText = roleLabel(msg.sender_role);
         return (
-          <div key={msg.id} className="flex gap-3">
+          <div key={msg.id} className={cn("flex", align)}>
             <div
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                roleBadgeClass(msg.sender_role),
+                "flex w-full max-w-215 flex-col gap-2",
+                r === "seller" && "items-end",
               )}
             >
-              {initials(msg.sender_name)}
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="text-sm font-semibold text-foreground">
+              <div
+                className={cn(
+                  "flex items-center gap-2 text-[11px] text-muted-foreground",
+                  r === "seller" && "justify-end",
+                )}
+              >
+                {r !== "seller" ? (
+                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-[10px] font-semibold text-foreground">
+                    {initials(msg.sender_name)}
+                  </div>
+                ) : null}
+                <span className="font-semibold text-foreground">
                   {msg.sender_name || "Unknown"}
                 </span>
-                {msg.sender_role && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider",
-                      roleBadgeClass(msg.sender_role),
-                    )}
-                  >
-                    {msg.sender_role}
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {msg.sender_email}
+                <Badge variant="secondary" className="rounded-full">
+                  {roleText}
+                </Badge>
+                {msg.sender_email ? (
+                  <span className="truncate">{msg.sender_email}</span>
+                ) : null}
+                <span className="ml-auto tabular-nums">
+                  {formatDateTime(msg.created_at)}
                 </span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {formatTime(msg.created_at)}
-                </span>
+                {r === "seller" ? (
+                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-[10px] font-semibold text-foreground">
+                    {initials(msg.sender_name)}
+                  </div>
+                ) : null}
               </div>
 
-              {msg.reply_to_message && (
-                <div className="rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5 text-xs text-muted-foreground">
-                  <p className="line-clamp-2">{msg.reply_to_message.text}</p>
+              {msg.reply_to_message ? (
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-lg border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground",
+                    r === "seller" && "ml-auto",
+                  )}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wider">
+                    Replying to
+                  </p>
+                  <p className="mt-1 line-clamp-2">
+                    {msg.reply_to_message.text}
+                  </p>
                 </div>
-              )}
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-foreground whitespace-pre-wrap">
+              ) : null}
+
+              <div
+                className={cn(
+                  "max-w-[85%] rounded-2xl border px-3 py-2 text-sm leading-relaxed text-foreground shadow-sm whitespace-pre-wrap",
+                  bubbleClass(msg.sender_role),
+                  r === "seller"
+                    ? "rounded-tr-md"
+                    : r === "buyer"
+                      ? "rounded-tl-md"
+                      : "rounded-tl-md rounded-tr-md",
+                )}
+              >
                 {msg.message}
               </div>
-              {onReplyTo && (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => onReplyTo(msg)}
+
+              {attached.length > 0 ? (
+                <div
+                  className={cn(
+                    "grid max-w-[85%] gap-2",
+                    r === "seller" && "ml-auto",
+                  )}
                 >
-                  <Reply className="size-3" aria-hidden /> Reply in thread
-                </button>
-              )}
-
-              {attached.length > 0 && (
-                <div className="space-y-2">
-                  {attached.map((ev) => (
-                    <div
-                      key={ev.id}
-                      className="rounded-lg border border-border bg-background p-3 space-y-2"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Evidence from {ev.uploaded_by_name || "Unknown"}
-                        </span>
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                            roleBadgeClass(ev.uploaded_by_role),
-                          )}
-                        >
-                          {ev.uploaded_by_role || "unknown role"}
-                        </span>
-                      </div>
-
-                      {ev.file_type?.startsWith("image/") ? (
-                        <div className="space-y-2">
-                          <a
-                            href={ev.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block"
-                          >
-                            <img
-                              src={ev.file_url}
-                              alt={ev.object_key}
-                              className="max-h-64 rounded-md border object-contain"
-                              loading="lazy"
-                            />
-                          </a>
-                          <div className="flex flex-wrap gap-2">
-                            {ev.is_tampered && (
-                              <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
-                                Tampered
-                              </span>
-                            )}
-                            {ev.ela_status && (
-                              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                                ELA: {ev.ela_status}
-                              </span>
-                            )}
-                            {ev.ela_score !== null &&
-                              ev.ela_score !== undefined && (
-                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                                  Score: {ev.ela_score}
-                                </span>
-                              )}
+                  {attached.map((ev) => {
+                    const isImage = ev.file_type?.startsWith("image/");
+                    const title = filenameFromKey(ev.object_key);
+                    return (
+                      <div
+                        key={ev.id}
+                        className="rounded-xl border border-border bg-background/80 p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p
+                              className="truncate text-xs font-semibold text-foreground"
+                              title={title}
+                            >
+                              {title}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              Uploaded by {ev.uploaded_by_name || "Unknown"} ·{" "}
+                              {roleLabel(ev.uploaded_by_role)}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            {evidenceMetaBadges(ev)}
                           </div>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                              <polyline points="14 2 14 8 20 8" />
-                              <line x1="16" y1="13" x2="8" y2="13" />
-                              <line x1="16" y1="17" x2="8" y2="17" />
-                              <polyline points="10 9 9 9 8 9" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
+                        <div className="mt-2">
+                          {isImage ? (
+                            <ZoomableImage
+                              src={ev.file_url}
+                              alt={title}
+                              label="Evidence image"
+                              className="max-h-64"
+                            />
+                          ) : (
                             <a
                               href={ev.file_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="block truncate text-sm font-medium text-primary hover:underline"
+                              className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
                             >
-                              {ev.object_key.split("/").pop() || ev.object_key}
+                              <ExternalLink className="size-4" aria-hidden />
+                              <span className="truncate">Open file</span>
                             </a>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {ev.is_tampered && (
-                                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
-                                  Tampered
-                                </span>
-                              )}
-                              {ev.ela_status && (
-                                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                                  ELA: {ev.ela_status}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              ) : null}
+
+              {onReplyTo ? (
+                <div className={cn("max-w-[85%]", r === "seller" && "ml-auto")}>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => onReplyTo(msg)}
+                  >
+                    <Reply className="size-3" aria-hidden /> Reply
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         );
@@ -397,29 +605,17 @@ function ThreadSnapshotChat({
                 <span className="text-xs font-medium text-muted-foreground">
                   Evidence from {ev.uploaded_by_name || "Unknown"}
                 </span>
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                    roleBadgeClass(ev.uploaded_by_role),
-                  )}
-                >
-                  {ev.uploaded_by_role || "unknown role"}
-                </span>
+                <Badge variant="secondary" className="rounded-full">
+                  {roleLabel(ev.uploaded_by_role)}
+                </Badge>
               </div>
               {ev.file_type?.startsWith("image/") ? (
-                <a
-                  href={ev.file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <img
-                    src={ev.file_url}
-                    alt={ev.object_key}
-                    className="max-h-64 rounded-md border object-contain"
-                    loading="lazy"
-                  />
-                </a>
+                <ZoomableImage
+                  src={ev.file_url}
+                  alt={ev.object_key}
+                  label="Evidence image"
+                  className="max-h-64"
+                />
               ) : (
                 <a
                   href={ev.file_url}
@@ -461,10 +657,12 @@ type ForensicsResponse = {
 
 function ForensicsResultsView({
   data,
+  threadData,
   isPending,
   errorMessage,
 }: {
   data: unknown;
+  threadData?: unknown;
   isPending?: boolean;
   errorMessage?: string | null;
 }) {
@@ -482,6 +680,11 @@ function ForensicsResultsView({
 
   const payload = data as ForensicsResponse | null;
   const results = payload?.evidence_results ?? [];
+
+  const threadPayload = threadData as { evidence?: ThreadEvidence[] } | null;
+  const evidenceById = new Map(
+    (threadPayload?.evidence ?? []).map((ev) => [ev.id, ev] as const),
+  );
 
   if (results.length === 0) {
     return (
@@ -560,7 +763,7 @@ function ForensicsResultsView({
       {results.map((ev) => (
         <div
           key={ev.evidence_id}
-          className="rounded-lg border border-border bg-background p-4 space-y-3"
+          className="rounded-xl border border-border bg-background p-3"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
@@ -584,25 +787,39 @@ function ForensicsResultsView({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {ev.heatmap_url && (
-              <a
-                href={ev.heatmap_url}
-                target="_blank"
-                rel="noreferrer"
-                className="block"
-              >
-                <img
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
+            {(() => {
+              const original =
+                evidenceById.get(ev.evidence_id)?.file_url ?? null;
+              if (!original) return null;
+              return (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Original
+                  </p>
+                  <ZoomableImage
+                    src={original}
+                    alt={filename(ev.object_key)}
+                    label="Original evidence"
+                    className="max-h-72"
+                  />
+                </div>
+              );
+            })()}
+
+            {ev.heatmap_url ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  ELA heatmap
+                </p>
+                <ZoomableImage
                   src={ev.heatmap_url}
                   alt={`ELA heatmap for ${filename(ev.object_key)}`}
-                  className="max-h-48 w-full rounded-md border object-contain"
-                  loading="lazy"
+                  label="ELA heatmap"
+                  className="max-h-72"
                 />
-                <p className="mt-1 text-[10px] text-center text-muted-foreground">
-                  ELA Heatmap
-                </p>
-              </a>
-            )}
+              </div>
+            ) : null}
 
             <div className="flex flex-col justify-center space-y-3">
               {scoreBar(ev.ela_score)}
@@ -624,7 +841,7 @@ function ForensicsResultsView({
                   <div className="flex justify-between">
                     <span>Heatmap key</span>
                     <span
-                      className="truncate max-w-[12rem] font-mono text-[10px] text-foreground"
+                      className="truncate max-w-48 font-mono text-[10px] text-foreground"
                       title={ev.heatmap_object_key}
                     >
                       {filename(ev.heatmap_object_key)}
@@ -780,8 +997,16 @@ export function ModeratorDisputeConsoleView({
       ? threadQuery.error.message
       : null;
 
+  const analysis = latestCompletedAnalysis(analysesQuery.data);
+  const analysisSummary =
+    analysis?.summary ||
+    "AI analysis summarizes the buyer/seller chat context that happened before the dispute was opened.";
+  const analysisRecommendation =
+    analysis?.recommendation ||
+    "Use this summary to decide what evidence to request next or whether to proceed with a final resolution.";
+
   return (
-    <div className={cn(e.layout.container, "space-y-8 py-8 lg:py-12")}>
+    <div className={cn(e.layout.container, "py-8 lg:py-12")}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <header className="max-w-2xl">
           <p className={cn(e.typography.eyebrow, "text-muted-foreground")}>
@@ -804,293 +1029,376 @@ export function ModeratorDisputeConsoleView({
         </Button>
       </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Thread snapshot
-          </CardTitle>
-          <CardDescription>
-            Chronological chat transcript with attached evidence.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ThreadSnapshotChat
-            data={threadQuery.data}
-            isPending={threadQuery.isPending}
-            errorMessage={threadErr}
-            onReplyTo={(msg) => setReplyTo(msg)}
-          />
-          <div className="border-t border-border pt-4 space-y-2">
-            {replyTo && (
-              <div className="flex items-start justify-between gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Reply to
+      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-6">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                Conversation
+              </CardTitle>
+              <CardDescription>
+                Messaging-style view of the dispute conversation. Buyer messages
+                are left, Seller messages are right, and Moderator messages are
+                centered.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ThreadSnapshotChat
+                data={threadQuery.data}
+                isPending={threadQuery.isPending}
+                errorMessage={threadErr}
+                onReplyTo={(msg) => setReplyTo(msg)}
+              />
+
+              <div className="border-t border-border pt-4 space-y-2">
+                {replyTo && (
+                  <div className="flex items-start justify-between gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Replying to
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-muted-foreground">
+                        {replyTo.message}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setReplyTo(null)}
+                    >
+                      <XIcon
+                        className="size-4"
+                        aria-label="Clear reply target"
+                      />
+                    </Button>
+                  </div>
+                )}
+                <Label
+                  htmlFor="mod-message"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
+                  Send message as moderator
+                </Label>
+                <div className="flex gap-2">
+                  <Textarea
+                    id="mod-message"
+                    rows={2}
+                    value={moderatorMessage}
+                    onChange={(ev) => setModeratorMessage(ev.target.value)}
+                    placeholder="Type a message to the dispute thread…"
+                    className="min-h-[unset] resize-none"
+                    disabled={sendMessageMutation.isPending}
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter" && !ev.shiftKey) {
+                        ev.preventDefault();
+                        if (moderatorMessage.trim())
+                          sendMessageMutation.mutate();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    disabled={
+                      !moderatorMessage.trim() || sendMessageMutation.isPending
+                    }
+                    onClick={() => sendMessageMutation.mutate()}
+                    className="shrink-0 self-end"
+                  >
+                    {sendMessageMutation.isPending ? "Sending…" : "Send"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold">
+                  Evidence & ELA forensics
+                </CardTitle>
+                <CardDescription>
+                  Run Error Level Analysis (ELA) on an evidence bundle and
+                  review the heatmap side-by-side with the original.
+                </CardDescription>
+              </div>
+              <div className="w-full max-w-sm space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Evidence bundle
+                </Label>
+                {(() => {
+                  const evidenceOptions = extractEvidenceOptions(
+                    threadQuery.data,
+                  );
+                  if (threadQuery.isPending) {
+                    return <Skeleton className="h-9 w-full" />;
+                  }
+                  if (evidenceOptions.length === 0) {
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        No evidence identifiers detected in this thread.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="flex gap-2">
+                      <Select value={evidenceId} onValueChange={setEvidenceId}>
+                        <SelectTrigger
+                          size="sm"
+                          className="w-full cursor-pointer"
+                        >
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {evidenceOptions.map((opt) => (
+                            <SelectItem key={opt.id} value={opt.id}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="shrink-0"
+                        disabled={
+                          !evidenceId.trim() || rerunElaMutation.isPending
+                        }
+                        onClick={() => rerunElaMutation.mutate()}
+                      >
+                        {rerunElaMutation.isPending ? "Queueing…" : "Run ELA"}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ForensicsResultsView
+                data={forensicsQuery.data}
+                threadData={threadQuery.data}
+                isPending={forensicsQuery.isPending}
+                errorMessage={
+                  forensicsQuery.isError &&
+                  forensicsQuery.error instanceof Error
+                    ? forensicsQuery.error.message
+                    : null
+                }
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold">
+                  AI pre-dispute chat summary
+                </CardTitle>
+                <CardDescription>
+                  This analysis summarizes buyer/seller chat context before the
+                  dispute was opened, helping you spot intent, contradictions,
+                  and missing evidence.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={analyzeChatMutation.isPending}
+                onClick={() => analyzeChatMutation.mutate()}
+              >
+                {analyzeChatMutation.isPending
+                  ? "Analyzing…"
+                  : "Refresh summary"}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Summary
                   </p>
-                  <p className="mt-1 line-clamp-2 text-muted-foreground">
-                    {replyTo.message}
+                  <p className="mt-2 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                    {analysisSummary}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setReplyTo(null)}
-                >
-                  <XIcon className="size-4" aria-label="Clear reply target" />
-                </Button>
+                <div className="rounded-xl border border-border bg-muted/25 p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Recommendation
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                    {analysisRecommendation}
+                  </p>
+                </div>
               </div>
-            )}
-            <Label
-              htmlFor="mod-message"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Send message as moderator
-            </Label>
-            <div className="flex gap-2">
-              <Textarea
-                id="mod-message"
-                rows={2}
-                value={moderatorMessage}
-                onChange={(ev) => setModeratorMessage(ev.target.value)}
-                placeholder="Type a message to the dispute thread…"
-                className="min-h-[unset] resize-none"
-                disabled={sendMessageMutation.isPending}
-                onKeyDown={(ev) => {
-                  if (ev.key === "Enter" && !ev.shiftKey) {
-                    ev.preventDefault();
-                    if (moderatorMessage.trim()) sendMessageMutation.mutate();
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Stored analyses
+                </p>
+                <ChatAnalysesView
+                  data={analysesQuery.data}
+                  isPending={analysesQuery.isPending}
+                  errorMessage={
+                    analysesQuery.isError &&
+                    analysesQuery.error instanceof Error
+                      ? analysesQuery.error.message
+                      : null
                   }
-                }}
-              />
-              <Button
-                type="button"
-                disabled={
-                  !moderatorMessage.trim() || sendMessageMutation.isPending
-                }
-                onClick={() => sendMessageMutation.mutate()}
-                className="shrink-0 self-end"
-              >
-                {sendMessageMutation.isPending ? "Sending…" : "Send"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Workflow tools
-          </CardTitle>
-          <CardDescription>Moderator actions for this dispute.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              Resolution note
-            </h3>
-            <div className="max-w-xl space-y-2">
-              <Textarea
-                rows={3}
-                value={resolutionNote}
-                onChange={(ev) => setResolutionNote(ev.target.value)}
-                placeholder="Internal note surfaced on the dispute ledger"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={noteMutation.isPending}
-                onClick={() => noteMutation.mutate()}
-              >
-                Add note
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3 border-t border-border pt-6">
-            <h3 className="text-sm font-semibold text-foreground">
-              Resolve dispute
-            </h3>
-            <p className="max-w-xl text-xs text-muted-foreground">
-              As the assigned moderator, your decision is final. Select who the
-              dispute resolves in favor of and provide a justification before
-              submitting.
-            </p>
-            <div className="grid max-w-xl gap-4">
-              <div className="space-y-2">
-                <Label>Resolution</Label>
-                <Select
-                  value={winner}
-                  onValueChange={(v) => setWinner(v as "buyer" | "seller")}
-                >
-                  <SelectTrigger size="sm" className="w-full cursor-pointer">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="buyer">
-                      Resolve in favor of Buyer
-                    </SelectItem>
-                    <SelectItem value="seller">
-                      Resolve in favor of Seller
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="resolution-note">Justification</Label>
-                <Textarea
-                  id="resolution-note"
-                  rows={3}
-                  value={resolutionDecisionNote}
-                  onChange={(ev) => setResolutionDecisionNote(ev.target.value)}
-                  placeholder="Required: explain the rationale for this resolution decision"
                 />
               </div>
-              <Button
-                type="button"
-                disabled={
-                  !resolutionDecisionNote.trim() || resolveMutation.isPending
-                }
-                onClick={() => resolveMutation.mutate()}
-              >
-                {resolveMutation.isPending
-                  ? "Submitting…"
-                  : "Submit final resolution"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Evidence integrity
-          </CardTitle>
-          <CardDescription>
-            Select an evidence bundle from the thread to re-run ELA forensics.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="max-w-xl space-y-4">
-          {(() => {
-            const evidenceOptions = extractEvidenceOptions(threadQuery.data);
-            if (threadQuery.isPending) {
-              return (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-10 w-full" />
+        <aside className="space-y-6">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                Case snapshot
+              </CardTitle>
+              <CardDescription>
+                Quick stats and a starting point.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {threadQuery.isPending ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
                 </div>
-              );
-            }
-            if (evidenceOptions.length === 0) {
-              return (
-                <Alert>
-                  <AlertTitle>No evidence found</AlertTitle>
-                  <AlertDescription className="text-xs">
-                    This thread does not contain any extractable evidence
-                    identifiers.
-                  </AlertDescription>
-                </Alert>
-              );
-            }
-            return (
-              <div className="space-y-3">
+              ) : (
+                (() => {
+                  const thread = threadQuery.data as {
+                    messages?: ThreadMessage[];
+                    evidence?: ThreadEvidence[];
+                  } | null;
+                  const messages = thread?.messages ?? [];
+                  const evidence = thread?.evidence ?? [];
+                  const forensics =
+                    forensicsQuery.data as ForensicsResponse | null;
+                  const tampered = (forensics?.evidence_results ?? []).filter(
+                    (r) => Boolean(r.is_tampered),
+                  ).length;
+
+                  return (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg border border-border bg-muted/25 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Messages
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-foreground">
+                          {messages.length}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/25 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Evidence
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-foreground">
+                          {evidence.length}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/25 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Tampered
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-foreground">
+                          {tampered}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                Moderator actions
+              </CardTitle>
+              <CardDescription>Notes and final resolution.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="mod-note">Resolution note</Label>
+                <Textarea
+                  id="mod-note"
+                  rows={3}
+                  value={resolutionNote}
+                  onChange={(ev) => setResolutionNote(ev.target.value)}
+                  placeholder="Internal note surfaced on the dispute ledger"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={noteMutation.isPending}
+                  onClick={() => noteMutation.mutate()}
+                >
+                  Add note
+                </Button>
+              </div>
+
+              <div className="space-y-3 border-t border-border pt-5">
+                <p className="text-sm font-semibold text-foreground">
+                  Resolve dispute
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Your decision is final. Choose the winning party and record a
+                  clear justification.
+                </p>
                 <div className="space-y-2">
-                  <Label htmlFor="ev-id">Evidence bundle</Label>
-                  <Select value={evidenceId} onValueChange={setEvidenceId}>
-                    <SelectTrigger
-                      id="ev-id"
-                      size="sm"
-                      className="w-full cursor-pointer"
-                    >
-                      <SelectValue placeholder="Select evidence…" />
+                  <Label>Resolution</Label>
+                  <Select
+                    value={winner}
+                    onValueChange={(v) => setWinner(v as "buyer" | "seller")}
+                  >
+                    <SelectTrigger size="sm" className="w-full cursor-pointer">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {evidenceOptions.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="buyer">
+                        Resolve in favor of Buyer
+                      </SelectItem>
+                      <SelectItem value="seller">
+                        Resolve in favor of Seller
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="resolution-note">Justification</Label>
+                  <Textarea
+                    id="resolution-note"
+                    rows={3}
+                    value={resolutionDecisionNote}
+                    onChange={(ev) =>
+                      setResolutionDecisionNote(ev.target.value)
+                    }
+                    placeholder="Required: explain the rationale for this resolution decision"
+                  />
+                </div>
                 <Button
                   type="button"
-                  variant="secondary"
-                  disabled={!evidenceId.trim() || rerunElaMutation.isPending}
-                  onClick={() => rerunElaMutation.mutate()}
+                  className="w-full"
+                  disabled={
+                    !resolutionDecisionNote.trim() || resolveMutation.isPending
+                  }
+                  onClick={() => resolveMutation.mutate()}
                 >
-                  Re-run ELA Forensics
+                  {resolveMutation.isPending
+                    ? "Submitting…"
+                    : "Submit final resolution"}
                 </Button>
               </div>
-            );
-          })()}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-sm border-blue-200 bg-blue-50/30">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-blue-900">
-            Digital Receipt Forensics (ELA)
-          </CardTitle>
-          <CardDescription className="text-blue-700/80">
-            Error Level Analysis detects inconsistencies in pixel density that
-            occur when scammers alter numbers or dates on payment screenshots.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ForensicsResultsView
-            data={forensicsQuery.data}
-            isPending={forensicsQuery.isPending}
-            errorMessage={
-              forensicsQuery.isError && forensicsQuery.error instanceof Error
-                ? forensicsQuery.error.message
-                : null
-            }
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-sm border-purple-200 bg-purple-50/30">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-purple-900">
-            Conversational Intent Classifier
-          </CardTitle>
-          <CardDescription className="text-purple-700/80">
-            Uses Gemini NLP to analyze transaction chat logs for linguistic
-            markers indicating &quot;Artificial Urgency&quot; or &quot;Platform
-            Circumvention&quot;.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            type="button"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-            disabled={analyzeChatMutation.isPending}
-            onClick={() => analyzeChatMutation.mutate()}
-          >
-            {analyzeChatMutation.isPending
-              ? "Analyzing..."
-              : "Run Chat Analysis"}
-          </Button>
-
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-purple-900">
-              Stored analyses
-            </h4>
-            <ChatAnalysesView
-              data={analysesQuery.data}
-              isPending={analysesQuery.isPending}
-              errorMessage={
-                analysesQuery.isError && analysesQuery.error instanceof Error
-                  ? analysesQuery.error.message
-                  : null
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }

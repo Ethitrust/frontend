@@ -247,6 +247,22 @@ export async function fetchAdminDisputeThread(
   return adminGetJson(accessToken, `/api/me/admin/disputes/${id}/thread`)
 }
 
+export async function fetchAdminDisputeDetail(
+  accessToken: string,
+  disputeId: string,
+): Promise<any> {
+  const id = encodeURIComponent(disputeId)
+  return adminGetJson(accessToken, `/api/me/admin/disputes/${id}`)
+}
+
+export async function fetchAdminEscrowMessages(
+  accessToken: string,
+  escrowId: string,
+): Promise<any> {
+  const id = encodeURIComponent(escrowId)
+  return adminGetJson(accessToken, `/api/me/admin/escrows/${id}/messages`)
+}
+
 export async function postAdminDisputeAssignMediator(
   accessToken: string,
   disputeId: string,
@@ -313,4 +329,16 @@ export async function postAdminEvidenceRerunEla(
 ): Promise<unknown> {
   const id = encodeURIComponent(evidenceId)
   return adminPostJson(accessToken, `/api/me/admin/disputes/evidence/${id}/rerun-ela`, {})
+}
+
+export async function postAdminDisputeMessage(
+  accessToken: string,
+  disputeId: string,
+  body: {
+    message: string;
+    recipient_id: string | null;
+  },
+): Promise<unknown> {
+  const id = encodeURIComponent(disputeId)
+  return adminPostJson(accessToken, `/api/me/admin/disputes/${id}/messages`, body)
 }
