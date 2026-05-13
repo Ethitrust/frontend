@@ -68,3 +68,16 @@ export type EscrowMessageRow = {
   message: string
   created_at: string
 }
+
+export type EscrowAdjustmentRow = {
+  id: string
+  escrow_id: string
+  proposed_by_user_id: string
+  adjustment_type: string
+  status: string
+  proposed_amount?: number | null
+  new_delivery_date?: string | null
+  note?: string | null
+  created_at: string
+  responded_at?: string | null
+}

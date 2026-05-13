@@ -2,7 +2,84 @@
 
 import { getBffErrorMessage } from '@/lib/api/upstream-errors'
 
-import type { EscrowRow, MilestoneRow, PaginatedEscrowsList, EscrowEventRow, EscrowMessageRow } from '@/lib/escrows/escrow-list-types'
+import type { EscrowRow, MilestoneRow, PaginatedEscrowsList, EscrowEventRow, EscrowMessageRow, EscrowAdjustmentRow } from '@/lib/escrows/escrow-list-types'
+
+
+export async function fetchMeEscrowAdjustments(
+  accessToken: string,
+  escrowId: string,
+): Promise<EscrowAdjustmentRow[]> {
+  const res = await fetch(`/api/me/escrows/${encodeURIComponent(escrowId)}/adjustments`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!Array.isArray(data)) {
+    throw new Error('Unexpected adjustments response.')
+  }
+  return data as EscrowAdjustmentRow[]
+}
+
+export async function postProposeAdjustment(
+  accessToken: string,
+  escrowId: string,
+  payload: {
+    adjustment_type: string
+    proposed_amount?: number
+    new_delivery_date?: string
+    note?: string
+  },
+): Promise<EscrowAdjustmentRow> {
+  const res = await fetch(`/api/me/escrows/${encodeURIComponent(escrowId)}/adjustments`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as EscrowAdjustmentRow).id !== 'string') {
+    throw new Error('Unexpected proposal response.')
+  }
+  return data as EscrowAdjustmentRow
+}
+
+export async function postRespondToAdjustment(
+  accessToken: string,
+  adjustmentId: string,
+  action: 'accept' | 'reject',
+): Promise<EscrowAdjustmentRow> {
+  const res = await fetch(`/api/me/escrows/adjustments/${encodeURIComponent(adjustmentId)}/respond`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ action }),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as EscrowAdjustmentRow).id !== 'string') {
+    throw new Error('Unexpected respond response.')
+  }
+  return data as EscrowAdjustmentRow
+}
 
 async function parseJson(res: Response): Promise<unknown> {
   try {

@@ -60,8 +60,10 @@ import {
   postMeEscrowMessage,
   postMeEscrowAction,
   postMeMilestoneAction,
+  fetchMeEscrowAdjustments,
   type EscrowAction,
 } from "@/lib/escrows/me-escrows-api";
+import { EscrowSettlementNegotiation } from "./escrow-settlement-negotiation";
 import type { EscrowRow, MilestoneRow, EscrowEventRow, EscrowMessageRow } from "@/lib/escrows/escrow-list-types";
 import {
   formatEscrowDate,
@@ -998,6 +1000,12 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
     );
   }
 
+  const adjustmentsQuery = useQuery({
+    queryKey: ["me", "escrows", escrowId, "adjustments"],
+    queryFn: () => fetchMeEscrowAdjustments(accessToken!, escrowId),
+    enabled: !!accessToken,
+  });
+
   // ── Derived state ──────────────────────────────────────────────────────────
 
   const escrow = escrowQuery.data as EscrowRow;
@@ -1444,6 +1452,14 @@ export function EscrowDetailView({ escrowId }: { escrowId: string }) {
                 onMilestoneAction={handleMilestoneAction}
               />
             ) : null}
+
+            {/* Settlement Negotiation */}
+            <EscrowSettlementNegotiation
+              accessToken={accessToken!}
+              escrow={escrow}
+              adjustments={adjustmentsQuery.data ?? []}
+              currentUserId={viewerId}
+            />
 
             {/* Real-time Chat */}
             <Card className="shadow-sm flex flex-col h-[500px]">
