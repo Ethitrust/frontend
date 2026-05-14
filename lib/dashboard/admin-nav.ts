@@ -14,7 +14,9 @@ import {
   Scale,
   ScrollText,
   Settings2,
+  Shield,
   ShieldAlert,
+  TrendingUp,
   Users,
   WalletCards,
 } from 'lucide-react'
@@ -43,6 +45,15 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       { label: 'Risk flags', href: '/admin/risk-flags', icon: ShieldAlert },
       { label: 'KYC review queue', href: '/admin/kyc/review-queue', icon: ClipboardList },
       { label: 'Manual KYC', href: '/admin/kyc/submissions', icon: FileStack },
+    ],
+  },
+  {
+    heading: 'Risk monitoring',
+    items: [
+      { label: 'Dashboard', href: '/admin/risk-monitoring/dashboard', icon: Shield },
+      { label: 'Review queue', href: '/admin/risk-monitoring/review-queue', icon: ClipboardList },
+      { label: 'User profiles', href: '/admin/risk-monitoring/users', icon: Users },
+      { label: 'Circular flows', href: '/admin/risk-monitoring/circular-flows', icon: TrendingUp },
     ],
   },
   {
