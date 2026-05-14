@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Bot,
@@ -523,10 +524,18 @@ function PartyChannelChat({
         )}
       >
         <span className="flex items-center gap-2">
-          <div className={cn("size-2 rounded-full", role === "buyer" ? "bg-sky-500" : "bg-emerald-500")} />
+          <div
+            className={cn(
+              "size-2 rounded-full",
+              role === "buyer" ? "bg-sky-500" : "bg-emerald-500",
+            )}
+          />
           {label}
         </span>
-        <Badge variant="secondary" className="rounded-full px-3 py-1 text-[10px]">
+        <Badge
+          variant="secondary"
+          className="rounded-full px-3 py-1 text-[10px]"
+        >
           {role === "buyer" ? "Buyer" : "Seller"}
         </Badge>
         <span className="ml-auto text-xs font-normal opacity-70">
@@ -534,105 +543,117 @@ function PartyChannelChat({
         </span>
       </div>
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="h-[600px] flex-1 space-y-6 overflow-y-auto bg-muted/5 p-6 custom-scrollbar">
-        <div className="mb-6 rounded-xl border border-border/50 bg-background/50 px-4 py-3 text-xs text-muted-foreground shadow-sm">
-          <p className="flex items-center gap-2">
-            <ShieldAlert className="size-3 text-primary" />
-            <span>
-              Private channel between <span className="font-bold text-foreground">{role === "buyer" ? "Buyer" : "Seller"}</span> and <span className="font-bold text-foreground">Moderator</span>.
-            </span>
-          </p>
-        </div>
-        {channelMessages.length === 0 ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">
-            No messages in this channel yet.
-          </p>
-        ) : (
-          channelMessages.map((msg) => {
-            const attached = evidenceByMessage.get(msg.id) ?? [];
-            const isMediator = msg.sender_id === mediatorId;
-            const isSystem =
-              msg.message_type?.toLowerCase() === "system" ||
-              (msg.sender_role ?? "").toLowerCase() === "system";
-            return (
-              <article
-                key={msg.id}
-                className={cn("flex gap-4 group", isMediator && "flex-row-reverse")}
-              >
-                <div
+        <div className="h-150 flex-1 space-y-6 overflow-y-auto bg-muted/5 p-6 custom-scrollbar">
+          <div className="mb-6 rounded-xl border border-border/50 bg-background/50 px-4 py-3 text-xs text-muted-foreground shadow-sm">
+            <p className="flex items-center gap-2">
+              <ShieldAlert className="size-3 text-primary" />
+              <span>
+                Private channel between{" "}
+                <span className="font-bold text-foreground">
+                  {role === "buyer" ? "Buyer" : "Seller"}
+                </span>{" "}
+                and <span className="font-bold text-foreground">Moderator</span>
+                .
+              </span>
+            </p>
+          </div>
+          {channelMessages.length === 0 ? (
+            <p className="py-8 text-center text-xs text-muted-foreground">
+              No messages in this channel yet.
+            </p>
+          ) : (
+            channelMessages.map((msg) => {
+              const attached = evidenceByMessage.get(msg.id) ?? [];
+              const isMediator = msg.sender_id === mediatorId;
+              const isSystem =
+                msg.message_type?.toLowerCase() === "system" ||
+                (msg.sender_role ?? "").toLowerCase() === "system";
+              return (
+                <article
+                  key={msg.id}
                   className={cn(
-                    "mt-1 flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-sm transition-transform group-hover:scale-110",
-                    isMediator
-                      ? "bg-violet-600 text-white"
-                      : role === "buyer" ? "bg-sky-600 text-white" : "bg-emerald-600 text-white",
+                    "flex gap-4 group",
+                    isMediator && "flex-row-reverse",
                   )}
                 >
-                  {initials(msg.sender_name)}
-                </div>
-                <div className={cn("min-w-0 max-w-[75%] space-y-2")}>
                   <div
                     className={cn(
-                      "flex flex-wrap items-center gap-2 text-xs text-muted-foreground",
-                      isMediator && "justify-end",
-                    )}
-                  >
-                    <span className="font-bold text-foreground">
-                      {msg.sender_name || (isMediator ? "Moderator" : role)}
-                    </span>
-                    <span className="text-[10px] opacity-60">{formatDateTime(msg.created_at)}</span>
-                  </div>
-                  <div
-                    className={cn(
-                      "rounded-2xl border px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap transition-colors",
+                      "mt-1 flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-sm transition-transform group-hover:scale-110",
                       isMediator
-                        ? "rounded-tr-none border-violet-500/20 bg-violet-600 text-white"
-                        : "rounded-tl-none border-border bg-background text-foreground group-hover:bg-accent/5",
+                        ? "bg-violet-600 text-white"
+                        : role === "buyer"
+                          ? "bg-sky-600 text-white"
+                          : "bg-emerald-600 text-white",
                     )}
                   >
-                    {msg.message}
+                    {initials(msg.sender_name)}
                   </div>
-                  {attached.length > 0 && (
-                    <div className="grid gap-3 pt-2">
-                      {attached.map((ev) => (
-                        <div key={ev.id} className="max-w-sm">
-                          <EvidenceAttachment ev={ev} />
-                        </div>
-                      ))}
+                  <div className={cn("min-w-0 max-w-[75%] space-y-2")}>
+                    <div
+                      className={cn(
+                        "flex flex-wrap items-center gap-2 text-xs text-muted-foreground",
+                        isMediator && "justify-end",
+                      )}
+                    >
+                      <span className="font-bold text-foreground">
+                        {msg.sender_name || (isMediator ? "Moderator" : role)}
+                      </span>
+                      <span className="text-[10px] opacity-60">
+                        {formatDateTime(msg.created_at)}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </article>
-            );
-          })
-        )}
-      </div>
+                    <div
+                      className={cn(
+                        "rounded-2xl border px-4 py-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap transition-colors",
+                        isMediator
+                          ? "rounded-tr-none border-violet-500/20 bg-violet-600 text-white"
+                          : "rounded-tl-none border-border bg-background text-foreground group-hover:bg-accent/5",
+                      )}
+                    >
+                      {msg.message}
+                    </div>
+                    {attached.length > 0 && (
+                      <div className="grid gap-3 pt-2">
+                        {attached.map((ev) => (
+                          <div key={ev.id} className="max-w-sm">
+                            <EvidenceAttachment ev={ev} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
 
-      <div className="border-t border-border bg-background/50 p-4 backdrop-blur-md">
-        <div className="flex items-end gap-3">
-          <Textarea
-            rows={2}
-            value={draft}
-            onChange={(ev) => setDraft(ev.target.value)}
-            placeholder={`Send private message to ${role}...`}
-            className="flex-1 min-h-[60px] resize-none text-sm rounded-xl border-border bg-background shadow-inner focus-visible:ring-primary/30"
-            onKeyDown={(ev) => {
-              if (ev.key === "Enter" && !ev.shiftKey) {
-                ev.preventDefault();
-                if (draft.trim()) sendMutation.mutate();
-              }
-            }}
-          />
-          <Button
-            size="lg"
-            disabled={!draft.trim() || sendMutation.isPending}
-            onClick={() => sendMutation.mutate()}
-            className="shrink-0 h-[60px] w-[60px] rounded-xl shadow-lg transition-transform active:scale-95"
-          >
-            {sendMutation.isPending ? "..." : "Send"}
-          </Button>
+        <div className="border-t border-border bg-background/50 p-4 backdrop-blur-md">
+          <div className="flex items-end gap-3">
+            <Textarea
+              rows={2}
+              value={draft}
+              onChange={(ev) => setDraft(ev.target.value)}
+              placeholder={`Send private message to ${role}...`}
+              className="flex-1 min-h-15 resize-none text-sm rounded-xl border-border bg-background shadow-inner focus-visible:ring-primary/30"
+              onKeyDown={(ev) => {
+                if (ev.key === "Enter" && !ev.shiftKey) {
+                  ev.preventDefault();
+                  if (draft.trim()) sendMutation.mutate();
+                }
+              }}
+            />
+            <Button
+              size="lg"
+              disabled={!draft.trim() || sendMutation.isPending}
+              onClick={() => sendMutation.mutate()}
+              className="shrink-0 h-15 w-15 rounded-xl shadow-lg transition-transform active:scale-95"
+            >
+              {sendMutation.isPending ? "..." : "Send"}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
@@ -682,7 +703,7 @@ function ThreadSnapshotChat({
 
   const buyerId = buyerParticipant?.user_id ?? null;
   const sellerId = sellerParticipant?.user_id ?? null;
-  
+
   // Use the current logged-in user as the mediator ID
   const mediatorId = (payload as any)?.currentUserId ?? null;
 
@@ -736,7 +757,8 @@ function PreDisputeChatView({
       </div>
     );
   }
-  if (errorMessage) return <p className="text-sm text-destructive">{errorMessage}</p>;
+  if (errorMessage)
+    return <p className="text-sm text-destructive">{errorMessage}</p>;
   if (!data?.messages?.length) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
@@ -746,7 +768,8 @@ function PreDisputeChatView({
   }
 
   const messages = [...data.messages].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
   // Group messages by sender to determine alternating sides
@@ -769,33 +792,31 @@ function PreDisputeChatView({
       .slice(0, 2);
 
   return (
-    <div className="flex flex-col rounded-xl border border-border bg-gradient-to-b from-muted/30 to-muted/10 overflow-hidden">
+    <div className="flex flex-col rounded-xl border border-border bg-linear-to-b from-muted/30 to-muted/10 overflow-hidden">
       {/* Chat header */}
       <div className="border-b border-border bg-card/50 px-4 py-3 backdrop-blur-sm">
         <p className="text-xs font-medium text-muted-foreground">
-          The original conversation between parties before the dispute was raised.
+          The original conversation between parties before the dispute was
+          raised.
         </p>
       </div>
 
       {/* Chat messages - scrollable */}
-      <div className="flex-1 max-h-[600px] overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div className="flex-1 max-h-150 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {messagesWithSide.map((m: any) => {
           const isRight = m.sender_id !== firstSenderId;
           const senderColor = isRight ? "bg-emerald-600" : "bg-sky-600";
-          
+
           return (
             <div
               key={m.id}
-              className={cn(
-                "flex gap-3 group",
-                isRight && "flex-row-reverse"
-              )}
+              className={cn("flex gap-3 group", isRight && "flex-row-reverse")}
             >
               {/* Avatar */}
               <div
                 className={cn(
                   "mt-1 flex size-9 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm transition-transform group-hover:scale-110",
-                  senderColor
+                  senderColor,
                 )}
               >
                 {initials(m.sender_name)}
@@ -807,16 +828,21 @@ function PreDisputeChatView({
                 <div
                   className={cn(
                     "flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground",
-                    isRight && "justify-end"
+                    isRight && "justify-end",
                   )}
                 >
                   <span className="font-semibold text-foreground">
                     {m.sender_name || "User"}
                   </span>
-                  <Badge variant="outline" className="h-4 px-1.5 text-[9px] capitalize">
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[9px] capitalize"
+                  >
                     {m.sender_role || "participant"}
                   </Badge>
-                  <span className="opacity-70">{formatDateTime(m.created_at)}</span>
+                  <span className="opacity-70">
+                    {formatDateTime(m.created_at)}
+                  </span>
                 </div>
 
                 {/* Message content */}
@@ -825,7 +851,7 @@ function PreDisputeChatView({
                     "rounded-2xl border px-4 py-2.5 text-sm leading-relaxed shadow-sm whitespace-pre-wrap transition-colors",
                     isRight
                       ? "rounded-tr-none border-emerald-500/20 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-50"
-                      : "rounded-tl-none border-sky-500/20 bg-sky-50 text-sky-950 dark:bg-sky-950/30 dark:text-sky-50"
+                      : "rounded-tl-none border-sky-500/20 bg-sky-50 text-sky-950 dark:bg-sky-950/30 dark:text-sky-50",
                   )}
                 >
                   {m.message}
@@ -839,7 +865,8 @@ function PreDisputeChatView({
       {/* Chat footer info */}
       <div className="border-t border-border bg-card/50 px-4 py-2 backdrop-blur-sm">
         <p className="text-[10px] text-muted-foreground">
-          {messages.length} message{messages.length !== 1 ? "s" : ""} • Read-only view
+          {messages.length} message{messages.length !== 1 ? "s" : ""} •
+          Read-only view
         </p>
       </div>
     </div>
@@ -870,7 +897,8 @@ function CaseAnalysisView({
   if (!analysis) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-5 text-sm text-muted-foreground">
-        No AI chat analysis is available yet. Run analysis to summarize the pre-dispute conversation.
+        No AI chat analysis is available yet. Run analysis to summarize the
+        pre-dispute conversation.
       </div>
     );
   }
@@ -1336,8 +1364,15 @@ export function AdminDisputeConsoleView({
 
   const [mediatorId, setMediatorId] = useState("");
   const [resolutionNote, setResolutionNote] = useState("");
-  const [disputeAction, setDisputeAction] = useState("escalate");
+  const [disputeAction, setDisputeAction] = useState("resolve_seller");
   const [disputeActionNote, setDisputeActionNote] = useState("");
+  const [sellerPercentage, setSellerPercentage] = useState(80);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Get escrow amount for calculations
+  const escrowAmount = disputeDetailQuery.data?.escrow_amount || 0;
+  const sellerAmountCents = Math.round((escrowAmount * sellerPercentage) / 100);
+  const buyerRefundCents = escrowAmount - sellerAmountCents;
 
   const invalidateThread = () => {
     void qc.invalidateQueries({
@@ -1388,13 +1423,21 @@ export function AdminDisputeConsoleView({
       postAdminDisputeAction(accessToken, disputeId, {
         action: disputeAction,
         note: disputeActionNote.trim() || undefined,
+        seller_amount_cents:
+          disputeAction === "partial_settlement"
+            ? sellerAmountCents
+            : undefined,
       }),
     onSuccess: () => {
-      toast.success("Dispute action applied");
+      toast.success("Dispute resolution applied successfully");
       setDisputeActionNote("");
+      setShowConfirmDialog(false);
       invalidateThread();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      toast.error(err.message);
+      setShowConfirmDialog(false);
+    },
   });
 
   const analyzeChatMutation = useMutation({
@@ -1521,7 +1564,8 @@ export function AdminDisputeConsoleView({
                   AI analysis of the chat
                 </CardTitle>
                 <CardDescription>
-                  AI-generated summary and risk assessment based on the pre-dispute conversation.
+                  AI-generated summary and risk assessment based on the
+                  pre-dispute conversation.
                 </CardDescription>
               </div>
               <Button
@@ -1616,47 +1660,351 @@ export function AdminDisputeConsoleView({
                 </Button>
               </div>
 
-              <div className="space-y-3 border-t border-border pt-5">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Apply action
-                </h3>
-                <div className="space-y-2">
-                  <Label>Action code</Label>
-                  <Select
-                    value={disputeAction}
-                    onValueChange={setDisputeAction}
-                  >
-                    <SelectTrigger size="sm" className="w-full cursor-pointer">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="escalate">Escalate</SelectItem>
-                      <SelectItem value="close">Close</SelectItem>
-                      <SelectItem value="resume_negotiation">
-                        Resume negotiation
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4 border-t border-border pt-5">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Dispute Resolution
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    After reviewing evidence and chat, choose a resolution
+                  </p>
                 </div>
-                <Textarea
-                  rows={3}
-                  value={disputeActionNote}
-                  onChange={(ev) => setDisputeActionNote(ev.target.value)}
-                  placeholder="Optional moderator context"
-                />
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-medium">Resolution Type</Label>
+
+                  {/* Resolve in Favor of Buyer */}
+                  <div
+                    className={cn(
+                      "cursor-pointer rounded-lg border-2 p-3 transition-all hover:border-sky-500/50",
+                      disputeAction === "resolve_buyer"
+                        ? "border-sky-500 bg-sky-50 dark:bg-sky-950/20"
+                        : "border-border bg-background",
+                    )}
+                    onClick={() => setDisputeAction("resolve_buyer")}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        checked={disputeAction === "resolve_buyer"}
+                        onChange={() => setDisputeAction("resolve_buyer")}
+                        className="mt-0.5 size-4"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">
+                          Resolve in Favor of Buyer
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Full refund to buyer • Release escrow lock
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Resolve in Favor of Seller */}
+                  <div
+                    className={cn(
+                      "cursor-pointer rounded-lg border-2 p-3 transition-all hover:border-emerald-500/50",
+                      disputeAction === "resolve_seller"
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                        : "border-border bg-background",
+                    )}
+                    onClick={() => setDisputeAction("resolve_seller")}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        checked={disputeAction === "resolve_seller"}
+                        onChange={() => setDisputeAction("resolve_seller")}
+                        className="mt-0.5 size-4"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">
+                          Resolve in Favor of Seller
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Release full amount to seller • Complete escrow
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Partial Settlement */}
+                  <div
+                    className={cn(
+                      "cursor-pointer rounded-lg border-2 p-3 transition-all hover:border-violet-500/50",
+                      disputeAction === "partial_settlement"
+                        ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20"
+                        : "border-border bg-background",
+                    )}
+                    onClick={() => setDisputeAction("partial_settlement")}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        checked={disputeAction === "partial_settlement"}
+                        onChange={() => setDisputeAction("partial_settlement")}
+                        className="mt-0.5 size-4"
+                      />
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            Partial Settlement
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Custom split between buyer and seller
+                          </p>
+                        </div>
+
+                        {disputeAction === "partial_settlement" && (
+                          <div className="space-y-3 rounded-md border border-border bg-background p-3">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-medium text-muted-foreground">
+                                  Release to Seller
+                                </span>
+                                <span className="font-bold text-foreground">
+                                  {sellerPercentage}%
+                                </span>
+                              </div>
+                              <Slider
+                                value={[sellerPercentage]}
+                                onValueChange={(value) =>
+                                  setSellerPercentage(value[0])
+                                }
+                                min={0}
+                                max={100}
+                                step={5}
+                                className="w-full"
+                              />
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">
+                                  0%
+                                </span>
+                                <span className="text-muted-foreground">
+                                  100%
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 rounded-md bg-muted/50 p-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  Escrow Amount:
+                                </span>
+                                <span className="font-medium">
+                                  {(escrowAmount / 100).toFixed(2)} ETB
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                                <span>Seller Receives:</span>
+                                <span className="font-bold">
+                                  {(sellerAmountCents / 100).toFixed(2)} ETB
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sky-700 dark:text-sky-400">
+                                <span>Buyer Refund:</span>
+                                <span className="font-bold">
+                                  {(buyerRefundCents / 100).toFixed(2)} ETB
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Return to Negotiation */}
+                  <div
+                    className={cn(
+                      "cursor-pointer rounded-lg border-2 p-3 transition-all hover:border-amber-500/50",
+                      disputeAction === "return_to_negotiation"
+                        ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                        : "border-border bg-background",
+                    )}
+                    onClick={() => setDisputeAction("return_to_negotiation")}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        checked={disputeAction === "return_to_negotiation"}
+                        onChange={() =>
+                          setDisputeAction("return_to_negotiation")
+                        }
+                        className="mt-0.5 size-4"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">
+                          Return to Negotiation
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Close dispute • Return escrow to active status
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="resolution-note"
+                    className="text-xs font-medium"
+                  >
+                    Resolution Note{" "}
+                    {disputeAction !== "return_to_negotiation" && (
+                      <span className="text-destructive">*</span>
+                    )}
+                  </Label>
+                  <Textarea
+                    id="resolution-note"
+                    rows={3}
+                    value={disputeActionNote}
+                    onChange={(ev) => setDisputeActionNote(ev.target.value)}
+                    placeholder="Explain your decision and reasoning..."
+                    className="text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    This note will be recorded in the audit log and may be
+                    visible to parties.
+                  </p>
+                </div>
+
                 <Button
                   type="button"
-                  variant="destructive"
-                  className="w-full"
-                  disabled={actionMutation.isPending}
-                  onClick={() => actionMutation.mutate()}
+                  className={cn(
+                    "w-full",
+                    disputeAction === "resolve_buyer" &&
+                      "bg-sky-600 hover:bg-sky-700",
+                    disputeAction === "resolve_seller" &&
+                      "bg-emerald-600 hover:bg-emerald-700",
+                    disputeAction === "partial_settlement" &&
+                      "bg-violet-600 hover:bg-violet-700",
+                    disputeAction === "return_to_negotiation" &&
+                      "bg-amber-600 hover:bg-amber-700",
+                  )}
+                  disabled={
+                    actionMutation.isPending ||
+                    (disputeAction !== "return_to_negotiation" &&
+                      !disputeActionNote.trim())
+                  }
+                  onClick={() => setShowConfirmDialog(true)}
                 >
-                  Submit action
+                  {actionMutation.isPending
+                    ? "Processing..."
+                    : "Apply Resolution"}
                 </Button>
               </div>
             </CardContent>
-          </Card>
 
+            {/* Confirmation Dialog */}
+            <Dialog
+              open={showConfirmDialog}
+              onOpenChange={setShowConfirmDialog}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Dispute Resolution</DialogTitle>
+                  <DialogDescription>
+                    This action is permanent and will affect the escrow funds.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
+                    <p className="text-sm font-semibold">
+                      {disputeAction === "resolve_buyer" &&
+                        "Resolve in Favor of Buyer"}
+                      {disputeAction === "resolve_seller" &&
+                        "Resolve in Favor of Seller"}
+                      {disputeAction === "partial_settlement" &&
+                        "Partial Settlement"}
+                      {disputeAction === "return_to_negotiation" &&
+                        "Return to Negotiation"}
+                    </p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      {disputeAction === "resolve_buyer" && (
+                        <>
+                          <p>
+                            • Full refund: {(escrowAmount / 100).toFixed(2)} ETB
+                            to buyer
+                          </p>
+                          <p>• Escrow lock will be released</p>
+                          <p>• Dispute marked as resolved_buyer</p>
+                        </>
+                      )}
+                      {disputeAction === "resolve_seller" && (
+                        <>
+                          <p>
+                            • Full release: {(escrowAmount / 100).toFixed(2)}{" "}
+                            ETB to seller
+                          </p>
+                          <p>• Escrow will be completed</p>
+                          <p>• Dispute marked as resolved_seller</p>
+                        </>
+                      )}
+                      {disputeAction === "partial_settlement" && (
+                        <>
+                          <p>
+                            • Seller receives:{" "}
+                            {(sellerAmountCents / 100).toFixed(2)} ETB (
+                            {sellerPercentage}%)
+                          </p>
+                          <p>
+                            • Buyer refund:{" "}
+                            {(buyerRefundCents / 100).toFixed(2)} ETB (
+                            {100 - sellerPercentage}%)
+                          </p>
+                          <p>• Escrow will be completed</p>
+                        </>
+                      )}
+                      {disputeAction === "return_to_negotiation" && (
+                        <>
+                          <p>• Dispute will be closed</p>
+                          <p>• Escrow returns to active status</p>
+                          <p>• Parties can continue negotiation</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {disputeActionNote.trim() && (
+                    <div className="rounded-lg border border-border bg-background p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        Resolution Note:
+                      </p>
+                      <p className="text-sm">{disputeActionNote}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowConfirmDialog(false)}
+                    disabled={actionMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className={cn(
+                      "flex-1",
+                      disputeAction === "resolve_buyer" &&
+                        "bg-sky-600 hover:bg-sky-700",
+                      disputeAction === "resolve_seller" &&
+                        "bg-emerald-600 hover:bg-emerald-700",
+                      disputeAction === "partial_settlement" &&
+                        "bg-violet-600 hover:bg-violet-700",
+                      disputeAction === "return_to_negotiation" &&
+                        "bg-amber-600 hover:bg-amber-700",
+                    )}
+                    onClick={() => actionMutation.mutate()}
+                    disabled={actionMutation.isPending}
+                  >
+                    {actionMutation.isPending ? "Processing..." : "Confirm"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </Card>
         </aside>
       </div>
     </div>
