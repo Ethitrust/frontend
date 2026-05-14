@@ -1056,7 +1056,7 @@ function ForensicsResultsView({
               </span>
             </div>
 
-            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_280px]">
               <div className="grid gap-px bg-border md:grid-cols-2">
                 {(() => {
                   const original =
@@ -1100,11 +1100,11 @@ function ForensicsResultsView({
                           <ImagePreview
                             src={panel.url}
                             alt={`${panel.label} for ${filenameFromKey(ev.object_key)}`}
-                            className="h-72 w-full"
+                            className="h-96 w-full"
                             emptyLabel={panel.emptyLabel}
                           />
                         ) : (
-                          <div className="flex h-72 items-center justify-center rounded-md bg-background text-muted-foreground">
+                          <div className="flex h-96 items-center justify-center rounded-md bg-background text-muted-foreground">
                             <div className="text-center">
                               <Icon className="mx-auto size-6" aria-hidden />
                               <p className="mt-2 text-xs">{panel.emptyLabel}</p>
@@ -1478,7 +1478,7 @@ export function AdminDisputeConsoleView({
         </Button>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           <Card className="shadow-sm">
             <CardHeader>
