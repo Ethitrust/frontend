@@ -199,7 +199,7 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
                     <Badge variant="outline">Pending</Badge>
                   </td>
                   <td className="px-6 py-3 tabular-nums text-xs text-muted-foreground">
-                    {formatEscrowDateTime(i.invited_at)}
+                    {formatEscrowDateTime(i.expires_at)}
                   </td>
                   <td className="px-6 py-3 text-right">
                     <span className="text-xs text-muted-foreground pr-3">Pending</span>
