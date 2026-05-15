@@ -124,3 +124,49 @@ export async function postOrgInviteDecision(
   }
   return data as OrgInviteDecisionResponse
 }
+
+export async function postOrganizationSubscribe(
+  accessToken: string,
+  orgId: string,
+): Promise<{ payment_url: string; transaction_ref: string }> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/subscribe`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({}),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!data || typeof data !== 'object' || typeof (data as any).payment_url !== 'string') {
+    throw new Error('Unexpected subscribe response.')
+  }
+  return data as { payment_url: string; transaction_ref: string }
+}
+
+export async function postOrganizationSubscribeVerify(
+  accessToken: string,
+  orgId: string,
+  transaction_ref: string,
+): Promise<{ status: string; message: string }> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/subscribe/verify`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ transaction_ref }),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  return data as { status: string; message: string }
+}
