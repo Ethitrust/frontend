@@ -70,15 +70,76 @@ export function AdminFeesListView({ accessToken }: { accessToken: string }) {
   const canPrev = page > 1
   const canNext = Boolean(listQuery.data) && items.length >= pageSize
 
+  const stats = {
+    totalCollected: reconcileQuery.data?.reduce((acc, r) => acc + r.collected_amount, 0) || 0,
+    p2pRevenue: items.filter(i => i.fee_type === 'p2p' || i.fee_type === 'starter').reduce((acc, i) => acc + (i.amount || 0), 0),
+    apiRevenue: items.filter(i => i.fee_type === 'api' || i.fee_type === 'business').reduce((acc, i) => acc + (i.amount || 0), 0),
+    subscriptionRevenue: items.filter(i => i.fee_type === 'subscription').reduce((acc, i) => acc + (i.amount || 0), 0),
+    transactionCount: items.length
+  }
+
   return (
     <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
-      <header className="max-w-2xl">
-        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Platform</p>
-        <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>Fees</h1>
-        <p className={cn(e.typography.bodyMuted, 'mt-3')}>
-          Platform fee postings linked to escrows and orgs, plus reconcile rollups by currency.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Monetization engine</p>
+          <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>
+            Revenue Dashboard
+          </h1>
+          <p className={cn(e.typography.bodyMuted, 'mt-3')}>
+            Comprehensive view of platform income across P2P transaction fees, Business API usage, and recurring subscriptions.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2">
+          <div className="size-2 rounded-full bg-primary animate-pulse" />
+          <span className="text-xs font-semibold text-primary uppercase tracking-wider">Live tracking</span>
+        </div>
       </header>
+
+      {/* Primary Revenue Stats */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="shadow-sm border-primary/10 bg-primary/[0.02]">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Revenue (Page)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-serif">
+              {listQuery.isPending ? '...' : (stats.p2pRevenue + stats.apiRevenue + stats.subscriptionRevenue).toLocaleString()} 
+              <span className="ml-1 text-xs font-sans font-normal text-muted-foreground">ETB</span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">P2P Fees (1.5%)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-serif text-blue-600">
+              {listQuery.isPending ? '...' : stats.p2pRevenue.toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">API Usage (0.8%)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-serif text-emerald-600">
+              {listQuery.isPending ? '...' : stats.apiRevenue.toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Subscriptions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-serif text-purple-600">
+              {listQuery.isPending ? '...' : stats.subscriptionRevenue.toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {listQuery.isError ? (
         <Alert variant="destructive" className="mt-8">
@@ -130,64 +191,79 @@ export function AdminFeesListView({ accessToken }: { accessToken: string }) {
         </CardContent>
       </Card>
 
-      <Card className="mt-10 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Ledger rows</CardTitle>
-          <CardDescription>Page {page}.</CardDescription>
+      <Card className="mt-8 shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/5 border-b">
+          <CardTitle className="text-base font-semibold">Financial Ledger</CardTitle>
+          <CardDescription>Verified fee postings and automated reconciliation.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {listQuery.isPending ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No fee rows on this page.</p>
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+              No revenue records found
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-border">
+            <div className="overflow-x-auto rounded-xl border border-border">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Fee</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Payer</TableHead>
-                    <TableHead>Escrow</TableHead>
-                    <TableHead>Org</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider">Reference</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider">Type</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider">Revenue</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider">Source</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider">Timestamp</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(items as AdminFeeRow[]).map((row) => {
                     const cur = row.currency ?? 'ETB'
-                    const amt =
-                      row.amount !== undefined && row.amount !== null
-                        ? formatEscrowMoney(row.amount, cur)
-                        : '—'
+                    const isRefund = row.status === 'refunded'
                     return (
-                      <TableRow key={row.fee_id}>
-                        <TableCell className="break-all font-mono text-[11px]">{row.fee_id}</TableCell>
-                        <TableCell className="text-sm">{row.fee_type ?? '—'}</TableCell>
-                        <TableCell className="text-sm">{amt}</TableCell>
-                        <TableCell className="text-xs">{row.paid_by ?? '—'}</TableCell>
-                        <TableCell className="font-mono text-[11px]">
+                      <TableRow key={row.fee_id} className="group hover:bg-muted/20">
+                        <TableCell className="font-mono text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
+                          {row.fee_id.slice(0, 8)}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-medium capitalize">{row.fee_type || 'Platform'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={cn(
+                            "text-sm font-semibold",
+                            isRefund ? "text-orange-600" : "text-emerald-600"
+                          )}>
+                            {isRefund ? '-' : '+'}{row.amount?.toLocaleString()} {cur}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           {row.escrow_id ? (
                             <Link
                               href={`/admin/escrows/${encodeURIComponent(row.escrow_id)}`}
-                              className="break-all underline-offset-4 hover:underline"
+                              className="text-[10px] font-medium text-primary hover:underline"
                             >
-                              Escrow
+                              Escrow {row.escrow_id.slice(0, 8)}
                             </Link>
                           ) : (
-                            '—'
+                            <span className="text-[10px] text-muted-foreground">Platform Direct</span>
                           )}
                         </TableCell>
-                        <TableCell className="break-all font-mono text-[11px]">{row.org_id ?? '—'}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{row.status ?? '—'}</Badge>
+                          <Badge 
+                            variant={isRefund ? "outline" : "default"}
+                            className={cn(
+                              "text-[9px] font-bold uppercase py-0 px-1.5 h-5",
+                              !isRefund && "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border-emerald-500/20 shadow-none"
+                            )}
+                          >
+                            {row.status}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        <TableCell className="whitespace-nowrap text-[10px] text-muted-foreground italic">
                           {dt(row.created_at)}
                         </TableCell>
                       </TableRow>

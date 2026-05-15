@@ -68,7 +68,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       { label: 'Transactions', href: '/admin/transactions', icon: Activity },
       { label: 'Wallets', href: '/admin/wallets', icon: WalletCards },
       { label: 'Wallet locks', href: '/admin/wallet-locks', icon: Lock },
-      { label: 'Fees', href: '/admin/fees', icon: Landmark },
+      { label: 'Revenue', href: '/admin/fees', icon: Landmark },
     ],
   },
   {

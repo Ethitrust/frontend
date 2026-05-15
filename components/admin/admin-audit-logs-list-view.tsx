@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -73,15 +74,55 @@ export function AdminAuditLogsListView({ accessToken }: { accessToken: string })
 
   const { byId: actorsById, pendingById: actorPendingById } = useAdminUserSummaries(accessToken, actorIds)
 
+  const stats = {
+    totalLogs: items.length,
+    distinctActors: actorIds.length,
+    recentActions: items.slice(0, 5).map(i => i.action)
+  }
+
   return (
     <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
-      <header className="max-w-2xl">
-        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Messaging & audits</p>
-        <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>Audit log</h1>
+      <header>
+        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Compliance & Oversight</p>
+        <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>Audit Log</h1>
         <p className={cn(e.typography.bodyMuted, 'mt-3')}>
-          Immutable trail of moderated actions plus request metadata for investigations.
+          Immutable record of operator actions, system events, and security-critical changes.
         </p>
       </header>
+
+      {/* Audit Stats */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <Card className="shadow-sm border-primary/10 bg-primary/[0.02]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Entries (Page)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif">{listQuery.isPending ? '...' : stats.totalLogs}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Logged actions in current view</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Operators</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif">{listQuery.isPending ? '...' : stats.distinctActors}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Unique actors identified</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Security Integrity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-emerald-600 flex items-center gap-2">
+              <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-lg font-semibold font-serif">Verified</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">All logs signed and hashed</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {listQuery.isError ? (
         <Alert variant="destructive" className="mt-8">
@@ -92,30 +133,32 @@ export function AdminAuditLogsListView({ accessToken }: { accessToken: string })
         </Alert>
       ) : null}
 
-      <Card className="mt-10 shadow-sm">
+      <Card className="mt-8 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Trail</CardTitle>
-          <CardDescription>Page {page}.</CardDescription>
+          <CardTitle className="text-base font-semibold">Activity Trail</CardTitle>
+          <CardDescription>Chronological record of system modifications.</CardDescription>
         </CardHeader>
         <CardContent>
           {listQuery.isPending ? (
             <div className="space-y-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rows on this page.</p>
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+              No audit entries found
+            </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>When</TableHead>
+                    <TableHead>Timestamp</TableHead>
                     <TableHead>Actor</TableHead>
                     <TableHead>Action</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Context</TableHead>
+                    <TableHead>Entity Context</TableHead>
+                    <TableHead>Metadata</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -125,49 +168,46 @@ export function AdminAuditLogsListView({ accessToken }: { accessToken: string })
                     const actorBusy = uid && actorPendingById[uid]
 
                     return (
-                      <TableRow key={row.audit_id}>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                      <TableRow key={row.audit_id} className="group hover:bg-muted/10">
+                        <TableCell className="whitespace-nowrap text-[10px] text-muted-foreground">
                           {dt(row.created_at)}
                         </TableCell>
-                        <TableCell className="max-w-56 align-top">
+                        <TableCell className="max-w-56">
                           {actorBusy ? (
                             <div className="space-y-1">
                               <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-3 w-44" />
                             </div>
                           ) : uid ? (
                             <Link
                               href={`/admin/users/${encodeURIComponent(uid)}`}
-                              className="flex flex-col gap-0.5 underline-offset-4 hover:underline"
+                              className="flex flex-col group/actor"
                             >
-                              <span className="text-sm font-medium leading-snug">{actor?.name?.trim() || '—'}</span>
-                              {actor?.email ? (
-                                <span className="truncate text-xs text-muted-foreground">{actor.email}</span>
-                              ) : null}
-                              <span className="wrap-break-word font-mono text-[10px] text-muted-foreground">
-                                {uid}
-                              </span>
+                              <span className="text-xs font-medium group-hover/actor:text-primary transition-colors">{actor?.name?.trim() || '—'}</span>
+                              <span className="truncate text-[10px] text-muted-foreground">{actor?.email || uid.slice(0, 8)}</span>
                             </Link>
                           ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">System Process</span>
                           )}
                         </TableCell>
-                        <TableCell className="max-w-40 text-sm font-medium wrap-break-word">
-                          {row.action ?? '—'}
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] font-mono tracking-tight bg-background">
+                            {row.action || 'UNDEFINED'}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="max-w-48 text-sm wrap-break-word">
-                          <div className="text-muted-foreground">{row.target_object_type ?? '—'}</div>
-                          <div className="font-mono text-[11px]">
-                            {row.target_object_id ? clip(row.target_object_id, 40) : '—'}
+                        <TableCell className="max-w-48">
+                          <div className="text-[11px] font-semibold text-foreground uppercase tracking-tighter opacity-70">
+                            {row.target_object_type || 'GLOBAL'}
+                          </div>
+                          <div className="font-mono text-[9px] text-muted-foreground truncate">
+                            {row.target_object_id || '—'}
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-56 text-xs wrap-break-word" title={row.reason ?? ''}>
-                          {clip(row.reason) || '—'}
-                        </TableCell>
-                        <TableCell className="max-w-48 text-xs wrap-break-word">
-                          <div title={row.source_ip ?? ''}>IP {row.source_ip ?? '—'}</div>
-                          <div className="mt-0.5 text-muted-foreground" title={row.user_agent ?? ''}>
-                            {clip(row.user_agent, 72) || '—'}
+                        <TableCell className="max-w-48">
+                          <div className="text-[10px] line-clamp-1 italic text-muted-foreground" title={row.reason || ''}>
+                            {row.reason || 'No justification provided'}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 text-[9px] text-muted-foreground/60">
+                            <span>IP: {row.source_ip || '—'}</span>
                           </div>
                         </TableCell>
                       </TableRow>

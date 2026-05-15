@@ -59,18 +59,54 @@ export function AdminWalletsListView({ accessToken }: { accessToken: string }) {
   const ownerIds = useMemo(() => [...new Set(items.map((row) => row.owner_id).filter(Boolean))], [items])
   const { byId: ownerSummaries, pendingById: ownerPendingById } = useAdminUserSummaries(accessToken, ownerIds)
 
+  const stats = {
+    totalWallets: items.length,
+    activeWallets: items.filter(i => i.status === 'active' || i.status === 'open').length,
+    totalBalance: items.reduce((acc, i) => acc + (i.balance || 0), 0)
+  }
+
   return (
     <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
-      <header className="max-w-2xl">
-        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Platform</p>
+      <header>
+        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Platform financials</p>
         <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>
           Wallets
         </h1>
         <p className={cn(e.typography.bodyMuted, 'mt-3')}>
-          Fiat wallet balances owners use with escrows and withdrawals. Investigations surface stuck funds for
-          a single wallet id.
+          Manage user fiat balances, verify liquidity, and perform deep investigations into stuck funds.
         </p>
       </header>
+
+      {/* Stats Cards */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <Card className="shadow-sm border-primary/10 bg-primary/[0.02]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Wallets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif">{listQuery.isPending ? '...' : stats.totalWallets}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Registered on platform</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif">{listQuery.isPending ? '...' : stats.activeWallets}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Wallets in good standing</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Estimated Liquid Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif">{listQuery.isPending ? '...' : stats.totalBalance.toLocaleString()} <span className="text-sm font-sans font-normal text-muted-foreground">ETB</span></div>
+            <p className="mt-1 text-xs text-muted-foreground">Total available for withdrawal</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {listQuery.isError ? (
         <Alert variant="destructive" className="mt-8">
@@ -81,31 +117,33 @@ export function AdminWalletsListView({ accessToken }: { accessToken: string }) {
         </Alert>
       ) : null}
 
-      <Card className="mt-10 shadow-sm">
+      <Card className="mt-8 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Directory</CardTitle>
-          <CardDescription>Page {page}.</CardDescription>
+          <CardTitle className="text-base font-semibold">Wallet Directory</CardTitle>
+          <CardDescription>Comprehensive list of user-linked balances and lock statuses.</CardDescription>
         </CardHeader>
         <CardContent>
           {listQuery.isPending ? (
             <div className="space-y-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No wallets on this page.</p>
+            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+              No wallets found on this page
+            </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Wallet</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Currency</TableHead>
+                    <TableHead>Wallet ID</TableHead>
+                    <TableHead>Owner Identity</TableHead>
+                    <TableHead>Asset</TableHead>
                     <TableHead>Balances</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Updated</TableHead>
-                    <TableHead className="text-right">Investigate</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -121,28 +159,23 @@ export function AdminWalletsListView({ accessToken }: { accessToken: string }) {
                         : '—'
                     return (
                       <TableRow key={row.wallet_id}>
-                        <TableCell className="font-mono text-[11px] wrap-break-word">{row.wallet_id}</TableCell>
-                        <TableCell className="max-w-68 min-w-44 align-top">
+                        <TableCell className="font-mono text-[10px] text-muted-foreground">{row.wallet_id.slice(0, 8)}...</TableCell>
+                        <TableCell className="max-w-68 min-w-44">
                           {ownerPendingById[row.owner_id] ? (
-                            <div className="space-y-1.5 pt-1">
-                              <Skeleton className="h-4 w-[min(92%,240px)]" />
-                              <Skeleton className="h-3 w-40" />
+                            <div className="space-y-1 pt-1">
+                              <Skeleton className="h-4 w-40" />
+                              <Skeleton className="h-3 w-32" />
                             </div>
                           ) : (
                             <Link
                               href={`/admin/users/${encodeURIComponent(row.owner_id)}`}
-                              className="flex flex-col gap-0.5 underline-offset-4 hover:underline"
+                              className="group flex flex-col"
                             >
-                              <span className="text-sm font-medium leading-snug text-foreground">
-                                {ownerSummaries[row.owner_id]?.name?.trim() || '—'}
+                              <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                {ownerSummaries[row.owner_id]?.name || 'Unknown User'}
                               </span>
-                              {ownerSummaries[row.owner_id]?.email ? (
-                                <span className="text-xs leading-snug text-muted-foreground wrap-break-word">
-                                  {ownerSummaries[row.owner_id]?.email}
-                                </span>
-                              ) : null}
-                              <span className="wrap-break-word font-mono text-[10px] leading-tight tracking-tight text-muted-foreground">
-                                {row.owner_id}
+                              <span className="text-[10px] text-muted-foreground line-clamp-1">
+                                {ownerSummaries[row.owner_id]?.email || row.owner_id}
                               </span>
                             </Link>
                           )}

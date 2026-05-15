@@ -55,18 +55,54 @@ export function AdminDisputesListView({ accessToken }: { accessToken: string }) 
   const canPrev = page > 1
   const canNext = Boolean(listQuery.data) && items.length >= pageSize
 
+  const stats = {
+    total: items.length,
+    active: items.filter(i => i.status === 'active' || i.status === 'open' || i.status === 'pending_mediation').length,
+    resolved: items.filter(i => i.status === 'resolved' || i.status === 'closed').length
+  }
+
   return (
     <div className={cn(e.layout.container, 'py-8 lg:py-12')}>
-      <header className="max-w-2xl">
-        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Platform</p>
+      <header>
+        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Conflict Resolution</p>
         <h1 className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}>
-          Disputes
+          Dispute Center
         </h1>
         <p className={cn(e.typography.bodyMuted, 'mt-3')}>
-          Negotiations tied to escrows across the marketplace. Jump into the console for the thread,
-          mediator tools, and actions.
+          Manage and mediate platform-wide escrow conflicts with evidence verification and moderator tools.
         </p>
       </header>
+
+      {/* Dispute Summary Cards */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <Card className="shadow-sm border-primary/10 bg-primary/[0.02]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Volume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif">{listQuery.isPending ? '...' : stats.total}</div>
+            <p className="mt-1 text-[10px] text-muted-foreground">Historical disputes on current page</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border-orange-500/10 bg-orange-500/[0.02]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Pending Action</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif text-orange-700">{listQuery.isPending ? '...' : stats.active}</div>
+            <p className="mt-1 text-[10px] text-muted-foreground">Awaiting moderator or party input</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm border-emerald-500/10 bg-emerald-500/[0.02]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Resolved</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-serif text-emerald-700">{listQuery.isPending ? '...' : stats.resolved}</div>
+            <p className="mt-1 text-[10px] text-muted-foreground">Successfully closed negotiations</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {listQuery.isError ? (
         <Alert variant="destructive" className="mt-8">
