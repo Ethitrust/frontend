@@ -34,11 +34,11 @@ const COLS = [
   {
     title: "Resources",
     links: [
+      { label: "Integration Guide", href: "/developer/guide" },
+      { label: "API Reference", href: "/developer/guide#implementation" },
       { label: "Support", href: "mailto:support@ethitrust.me" },
       { label: "Sign in", href: "/signin" },
       { label: "Create account", href: "/signup" },
-      { label: "Reset password", href: "/forgot-password" },
-      { label: "Organization invites", href: "/org-invites" },
     ],
   },
 ]

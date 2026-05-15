@@ -193,39 +193,37 @@ export function OrgDeveloperView({ orgId }: { orgId: string }) {
                 </div>
 
                 <div className="rounded-lg border bg-card p-4">
-                  <h3 className="font-semibold text-sm mb-2">Workflow: Creating an Escrow</h3>
+                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <Webhook className="size-4" /> Webhook Verification
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Verify the <code className="text-xs">X-Signature</code> header using your signing secret (HMAC-SHA256).
+                  </p>
+                  <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
+{`# Python Example
+import hmac, hashlib
+msg = f"{timestamp}.{payload_body}".encode()
+expected = hmac.new(secret.encode(), msg, hashlib.sha256).hexdigest()
+is_valid = hmac.compare_digest(expected, signature)`}
+                  </pre>
+                </div>
+
+                <div className="rounded-lg border bg-card p-4">
+                  <h3 className="font-semibold text-sm mb-2">Creating an Escrow</h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     Initialize a new transaction. Ethitrust will automatically email the invitee.
                   </p>
                   <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
-                    {`curl -X POST https://api.ethitrust.me/v1/org-escrows \\
+{`curl -X POST https://api.ethitrust.me/v1/org-escrows \\
   -H "X-API-KEY: your_api_key" \\
-  -H "Content-Type: application/json" \\
+  -H "X-Idempotency-Key: ${crypto.randomUUID()}" \\
   -d '{
-    "title": "Purchase of Dell Laptop",
+    "title": "Software Service",
     "amount": 45000,
     "invitee_email": "seller@example.com",
     "escrow_type": "onetime",
     "inspection_period": 72
   }'`}
-                  </pre>
-                </div>
-
-                <div className="rounded-lg border bg-card p-4">
-                  <h3 className="font-semibold text-sm mb-2">Webhook Payloads</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Verify every webhook using the <code className="text-xs">X-Signature</code> header (HMAC-SHA256).
-                  </p>
-                  <pre className="bg-muted/50 p-3 rounded-md overflow-x-auto text-[10px] font-mono">
-                    {`{
-  "event": "escrow.completed",
-  "data": {
-    "escrow_id": "uuid",
-    "amount": 45000,
-    "status": "completed"
-  },
-  "timestamp": "2024-05-11T..."
-}`}
                   </pre>
                 </div>
               </CardContent>

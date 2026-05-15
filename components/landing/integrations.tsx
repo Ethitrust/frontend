@@ -19,6 +19,15 @@ export function Integrations() {
               Add a &quot;Pay with Escrow&quot; option to high-ticket B2B transactions in a single day —
               no replatforming required.
             </p>
+            <div className="mt-6">
+              <a 
+                href="/developer/guide" 
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                Read the integration guide
+                <span aria-hidden>→</span>
+              </a>
+            </div>
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">
               {[

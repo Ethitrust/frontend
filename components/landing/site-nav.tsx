@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 const NAV_LINKS = [
-  { label: "Product", href: "#how-it-works" },
-  { label: "Integrations", href: "#integrations" },
-  { label: "Security", href: "#security" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Product", href: "/#how-it-works" },
+  { label: "Integrations", href: "/#integrations" },
+  { label: "Developers", href: "/developer/guide" },
+  { label: "Pricing", href: "/#pricing" },
 ]
 
 export function SiteNav() {
