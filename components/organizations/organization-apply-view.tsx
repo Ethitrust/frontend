@@ -44,6 +44,9 @@ export function OrganizationApplyView({
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [tin, setTin] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
   const [commercialRegistrationFile, setCommercialRegistrationFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState<{
@@ -54,7 +57,7 @@ export function OrganizationApplyView({
 
   const applyMutation = useMutation({
     mutationFn: async () => {
-      const parsed = organizationApplySchema.safeParse({ name, slug, tin });
+      const parsed = organizationApplySchema.safeParse({ name, slug, tin, email, phone, address });
       if (!parsed.success) {
         throw new Error(
           parsed.error.issues[0]?.message ?? "Check the form fields.",
@@ -77,7 +80,12 @@ export function OrganizationApplyView({
       ]);
 
       return postOrganizationApply(accessToken, {
-        ...parsed.data,
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        tin: parsed.data.tin,
+        email: parsed.data.email,
+        phone_number: parsed.data.phone,
+        address: parsed.data.address,
         business_license_file_id: uploadedLicense.file_id,
         commercial_registration_file_id: uploadedCommReg.file_id,
       });
@@ -244,6 +252,43 @@ export function OrganizationApplyView({
                       onChange={(ev) => setTin(ev.target.value)}
                       maxLength={64}
                       placeholder="Enter your Tax Identification Number"
+                      className="transition-colors focus-visible:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-2.5">
+                    <Label htmlFor="org-email" className="flex items-center gap-1.5 text-sm font-medium">
+                      Contact Email
+                    </Label>
+                    <Input
+                      id="org-email"
+                      type="email"
+                      value={email}
+                      onChange={(ev) => setEmail(ev.target.value)}
+                      placeholder="contact@acme.com"
+                      className="transition-colors focus-visible:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-2.5">
+                    <Label htmlFor="org-phone" className="flex items-center gap-1.5 text-sm font-medium">
+                      Phone Number
+                    </Label>
+                    <Input
+                      id="org-phone"
+                      value={phone}
+                      onChange={(ev) => setPhone(ev.target.value)}
+                      placeholder="+251 9..."
+                      className="transition-colors focus-visible:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-2.5 sm:col-span-2">
+                    <Label htmlFor="org-address" className="flex items-center gap-1.5 text-sm font-medium">
+                      Business Address
+                    </Label>
+                    <Input
+                      id="org-address"
+                      value={address}
+                      onChange={(ev) => setAddress(ev.target.value)}
+                      placeholder="Addis Ababa, Ethiopia"
                       className="transition-colors focus-visible:ring-primary/30"
                     />
                   </div>

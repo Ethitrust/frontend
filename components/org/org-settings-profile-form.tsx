@@ -108,7 +108,7 @@ export function OrgSettingsProfileForm({
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input className="rounded-lg" {...field} />
+                      <Input disabled className="rounded-lg" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -121,7 +121,7 @@ export function OrgSettingsProfileForm({
                   <FormItem>
                     <FormLabel>Slug</FormLabel>
                     <FormControl>
-                      <Input className="rounded-lg" {...field} />
+                      <Input disabled className="rounded-lg" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,7 +186,7 @@ export function OrgSettingsProfileForm({
                   <FormItem>
                     <FormLabel>TIN</FormLabel>
                     <FormControl>
-                      <Input className="rounded-lg" {...field} />
+                      <Input disabled className="rounded-lg" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

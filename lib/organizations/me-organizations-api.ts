@@ -41,6 +41,9 @@ export async function postOrganizationApply(
     name: string
     slug: string
     tin: string
+    email?: string
+    phone_number?: string
+    address?: string
     business_license_file_id: string
     commercial_registration_file_id: string
   },

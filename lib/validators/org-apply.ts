@@ -7,6 +7,9 @@ export const organizationApplySchema = z.object({
       'Use a short URL-safe slug (lowercase letters, numbers, hyphen). Example: acme-trade-fabric',
   }),
   tin: z.string().trim().min(3).max(64),
+  email: z.string().trim().email().max(255).optional().or(z.literal('')),
+  phone: z.string().trim().max(20).optional().or(z.literal('')),
+  address: z.string().trim().max(512).optional().or(z.literal('')),
 })
 
 export type OrganizationApplyFormValues = z.infer<typeof organizationApplySchema>
