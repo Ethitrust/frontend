@@ -359,6 +359,29 @@ export function DisputeThreadView(props: {
                 </CardDescription>
               </CardHeader>
               <CardContent className="max-h-[min(520px,60vh)] space-y-3 overflow-y-auto py-6">
+                {terminal && (
+                  <Alert className="mb-6 border-primary/20 bg-primary/5">
+                    <Scale className="size-4" />
+                    <AlertTitle>Dispute Resolved</AlertTitle>
+                    <AlertDescription>
+                      This dispute has been resolved and is now closed. 
+                      {dispute?.resolution_note && (
+                        <p className="mt-2 text-sm font-medium italic">
+                          "{dispute.resolution_note}"
+                        </p>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {!terminal && dispute?.status === "escalated_mediation" && (
+                  <Alert className="mb-6 border-blue-500/20 bg-blue-500/5">
+                    <Scale className="size-4 text-blue-500" />
+                    <AlertTitle>Mediation in Progress</AlertTitle>
+                    <AlertDescription>
+                      A moderator is reviewing your case. Please answer any questions they have and wait for a resolution.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {sortedMessages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No messages yet.
@@ -366,9 +389,17 @@ export function DisputeThreadView(props: {
                 ) : (
                   sortedMessages.map((m) => {
                     const mine = Boolean(me?.id && m.sender_id === me.id);
-                    const role =
-                      participantRoleByUserId.get(m.sender_id ?? "") ??
-                      "Participant";
+                    const role = m.message_type === "system" 
+                      ? "System" 
+                      : (participantRoleByUserId.get(m.sender_id ?? "") ?? "Participant");
+                    
+                    const roleLabels: Record<string, string> = {
+                      buyer: "Buyer",
+                      seller: "Seller",
+                      mediator: "Moderator",
+                      System: "System Notification",
+                    };
+                    const label = roleLabels[role] || role;
                     return (
                       <div
                         key={m.id}
@@ -386,8 +417,8 @@ export function DisputeThreadView(props: {
                           )}
                         >
                           <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                            <span className="font-medium capitalize">
-                              {role}
+                            <span className="font-medium">
+                              {label}
                             </span>
                             <span aria-hidden>·</span>
                             <time dateTime={m.created_at ?? undefined}>
