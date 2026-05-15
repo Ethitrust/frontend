@@ -7,6 +7,7 @@ import { KeyRound, ShieldAlert } from "lucide-react";
 
 import { OrgSettingsApiKeyActions } from "@/components/org/org-settings-api-key-actions";
 import { OrgSettingsProfileForm } from "@/components/org/org-settings-profile-form";
+import { OrgSettingsTeamActions } from "@/components/org/org-settings-team-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,8 @@ export function OrgSettingsView({ orgId }: { orgId: string }) {
           )}
 
           <OrgSettingsProfileForm orgId={orgId} profile={profile} />
+          
+          <OrgSettingsTeamActions orgId={orgId} />
 
           <Card className="shadow-sm">
             <CardHeader className="flex-row flex-wrap items-center justify-between gap-4 space-y-0 border-b">

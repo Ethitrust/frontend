@@ -119,3 +119,68 @@ export async function deleteOrgApiKey(accessToken: string, orgId: string, apiKey
     throw new Error(getBffErrorMessage(data))
   }
 }
+
+export async function fetchOrgMembers(accessToken: string, orgId: string): Promise<any[]> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/members`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  return data as any[]
+}
+
+export async function fetchOrgInvites(accessToken: string, orgId: string): Promise<any[]> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/invites`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  return data as any[]
+}
+
+export async function postOrgInvite(accessToken: string, orgId: string, payload: { email: string, role: string }): Promise<any> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/invite-member`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  return data
+}
+
+export async function deleteOrgMember(accessToken: string, orgId: string, userId: string): Promise<void> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/remove-member`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ user_id: userId }),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+}
