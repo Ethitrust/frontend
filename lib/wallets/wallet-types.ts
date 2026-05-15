@@ -3,6 +3,7 @@
 export type WalletRow = {
   id: string
   owner_id: string
+  owner_type: string
   currency: string
   balance: number
   locked_balance: number

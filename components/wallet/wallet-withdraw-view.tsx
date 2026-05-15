@@ -32,6 +32,7 @@ import {
   pickDefaultWalletId,
   postWithdrawFromWallet,
 } from '@/lib/wallets/me-wallet-api'
+import { fetchMeOrganizations } from '@/lib/organizations/me-organizations-api'
 import type { WalletRow } from '@/lib/wallets/wallet-types'
 
 export function WalletWithdrawView() {
@@ -55,6 +56,12 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
   const walletsQuery = useQuery({
     queryKey: ['me', 'wallets'],
     queryFn: () => fetchMeWalletList(accessToken),
+    enabled: Boolean(accessToken),
+  })
+
+  const orgsQuery = useQuery({
+    queryKey: ['me', 'organizations'],
+    queryFn: () => fetchMeOrganizations(accessToken),
     enabled: Boolean(accessToken),
   })
 
@@ -172,11 +179,18 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
                       <SelectValue placeholder="Select wallet" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(walletsQuery.data as WalletRow[]).map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
-                          {w.currency} — {w.id.slice(0, 8)}…
-                        </SelectItem>
-                      ))}
+                      {(walletsQuery.data as WalletRow[]).map((w) => {
+                        let label = 'Personal Wallet'
+                        if (w.owner_type === 'organization') {
+                          const org = orgsQuery.data?.find(o => o.id === w.owner_id)
+                          label = org ? `Org: ${org.name}` : 'Organization Wallet'
+                        }
+                        return (
+                          <SelectItem key={w.id} value={w.id}>
+                            {label} ({w.currency}) — {w.id.slice(0, 8)}…
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

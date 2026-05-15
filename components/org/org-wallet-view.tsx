@@ -7,6 +7,7 @@ import { Landmark, Lock, Wallet } from "lucide-react";
 
 import { OrgWalletWithdrawForm } from "@/components/org/org-wallet-withdraw-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -169,12 +170,12 @@ function OrgWalletCard({
         </dl>
       </CardContent>
 
-      <CardContent className="border-t pt-0 pb-8">
-        <OrgWalletWithdrawForm
-          orgId={orgId}
-          wallet={w}
-          onSuccess={onWithdrawSuccess}
-        />
+      <CardContent className="border-t pt-4 pb-4 bg-muted/10 flex justify-end">
+        <Button asChild variant="default" className="rounded-full">
+          <Link href="/wallet/withdraw">
+            Withdraw funds
+          </Link>
+        </Button>
       </CardContent>
     </Card>
   );
