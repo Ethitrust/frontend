@@ -101,7 +101,7 @@ export function AdminRiskCircularFlowsView({
     queryKey: ['admin', 'risk', 'circular-flows', page, pageSize, statusFilter],
     queryFn: () =>
       fetchCircularFlows(accessToken, {
-        status: statusFilter || undefined,
+        status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
         page,
         page_size: pageSize,
       }),
@@ -245,7 +245,7 @@ export function AdminRiskCircularFlowsView({
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="detected">Detected</SelectItem>
                 <SelectItem value="investigating">Investigating</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>

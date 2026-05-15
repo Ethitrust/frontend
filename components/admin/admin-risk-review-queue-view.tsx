@@ -107,8 +107,8 @@ export function AdminRiskReviewQueueView({
   const pageSize = 20
 
   const [statusFilter, setStatusFilter] = useState<string>('pending')
-  const [priorityFilter, setPriorityFilter] = useState<string>('')
-  const [typeFilter, setTypeFilter] = useState<string>('')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
 
   const [selectedItem, setSelectedItem] = useState<AdminReviewQueueItem | null>(null)
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false)
@@ -119,9 +119,9 @@ export function AdminRiskReviewQueueView({
     queryKey: ['admin', 'risk', 'review-queue', page, pageSize, statusFilter, priorityFilter, typeFilter],
     queryFn: () =>
       fetchReviewQueue(accessToken, {
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        item_type: typeFilter || undefined,
+        status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
+        priority: priorityFilter && priorityFilter !== 'all' ? priorityFilter : undefined,
+        item_type: typeFilter && typeFilter !== 'all' ? typeFilter : undefined,
         page,
         page_size: pageSize,
       }),
@@ -200,7 +200,7 @@ export function AdminRiskReviewQueueView({
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="in_review">In Review</SelectItem>
                   <SelectItem value="resolved">Resolved</SelectItem>
@@ -217,7 +217,7 @@ export function AdminRiskReviewQueueView({
                   <SelectValue placeholder="All priorities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All priorities</SelectItem>
+                  <SelectItem value="all">All priorities</SelectItem>
                   <SelectItem value="urgent">Urgent</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
@@ -233,7 +233,7 @@ export function AdminRiskReviewQueueView({
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All types</SelectItem>
+                  <SelectItem value="all">All types</SelectItem>
                   <SelectItem value="escrow">Escrow</SelectItem>
                   <SelectItem value="user">User</SelectItem>
                   <SelectItem value="dispute">Dispute</SelectItem>

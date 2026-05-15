@@ -245,7 +245,7 @@ export interface RiskConfig {
 export async function fetchRiskStatistics(
   accessToken: string
 ): Promise<RiskStatistics> {
-  return adminGetJson<RiskStatistics>(accessToken, '/api/v1/admin/risk/statistics')
+  return adminGetJson<RiskStatistics>(accessToken, '/api/me/admin/risk/statistics')
 }
 
 /**
@@ -255,7 +255,7 @@ export async function fetchUserRiskProfile(
   accessToken: string,
   userId: string
 ): Promise<UserRiskProfile> {
-  return adminGetJson<UserRiskProfile>(accessToken, `/api/v1/admin/risk/users/${userId}/profile`)
+  return adminGetJson<UserRiskProfile>(accessToken, `/api/me/admin/risk/users/${userId}/profile`)
 }
 
 /**
@@ -265,7 +265,7 @@ export async function recalculateUserRisk(
   accessToken: string,
   userId: string
 ): Promise<{ user_id: string; risk_score: number; status: string }> {
-  return adminPostJson(accessToken, `/api/v1/admin/risk/users/${userId}/recalculate`, {})
+  return adminPostJson(accessToken, `/api/me/admin/risk/users/${userId}/recalculate`, {})
 }
 
 /**
@@ -279,7 +279,7 @@ export async function restrictUser(
 ): Promise<UserRiskProfile> {
   return adminPostJson<UserRiskProfile>(
     accessToken,
-    `/api/v1/admin/risk/users/${userId}/restrict`,
+    `/api/me/admin/risk/users/${userId}/restrict`,
     { reason, duration_days: durationDays }
   )
 }
@@ -294,7 +294,7 @@ export async function unrestrictUser(
 ): Promise<UserRiskProfile> {
   return adminPostJson<UserRiskProfile>(
     accessToken,
-    `/api/v1/admin/risk/users/${userId}/unrestrict`,
+    `/api/me/admin/risk/users/${userId}/unrestrict`,
     { notes }
   )
 }
@@ -306,7 +306,7 @@ export async function fetchEscrowRiskScore(
   accessToken: string,
   escrowId: string
 ): Promise<EscrowRiskScore> {
-  return adminGetJson<EscrowRiskScore>(accessToken, `/api/v1/admin/risk/escrows/${escrowId}/risk`)
+  return adminGetJson<EscrowRiskScore>(accessToken, `/api/me/admin/risk/escrows/${escrowId}/risk`)
 }
 
 /**
@@ -321,7 +321,7 @@ export async function reviewFlaggedEscrow(
 ): Promise<EscrowRiskScore> {
   return adminPostJson<EscrowRiskScore>(
     accessToken,
-    `/api/v1/admin/risk/escrows/${escrowId}/review?admin_id=${adminId}`,
+    `/api/me/admin/risk/escrows/${escrowId}/review?admin_id=${adminId}`,
     { action, notes }
   )
 }
@@ -352,7 +352,7 @@ export async function fetchReviewQueue(
   if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
   
   const query = searchParams.toString()
-  const path = `/api/v1/admin/risk/review-queue${query ? `?${query}` : ''}`
+  const path = `/api/me/admin/risk/review-queue${query ? `?${query}` : ''}`
   
   return adminGetJson(accessToken, path)
 }
@@ -367,7 +367,7 @@ export async function assignReviewItem(
 ): Promise<{ status: string; item_id: string }> {
   return adminPostJson(
     accessToken,
-    `/api/v1/admin/risk/review-queue/${itemId}/assign`,
+    `/api/me/admin/risk/review-queue/${itemId}/assign`,
     { admin_id: adminId }
   )
 }
@@ -384,7 +384,7 @@ export async function resolveReviewItem(
 ): Promise<{ status: string; item_id: string }> {
   return adminPostJson(
     accessToken,
-    `/api/v1/admin/risk/review-queue/${itemId}/resolve?admin_id=${adminId}`,
+    `/api/me/admin/risk/review-queue/${itemId}/resolve?admin_id=${adminId}`,
     { action, notes }
   )
 }
@@ -411,7 +411,7 @@ export async function fetchCircularFlows(
   if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
   
   const query = searchParams.toString()
-  const path = `/api/v1/admin/risk/circular-flows${query ? `?${query}` : ''}`
+  const path = `/api/me/admin/risk/circular-flows${query ? `?${query}` : ''}`
   
   return adminGetJson(accessToken, path)
 }
@@ -428,7 +428,7 @@ export async function investigateCircularFlow(
 ): Promise<{ status: string; detection_id: string }> {
   return adminPostJson(
     accessToken,
-    `/api/v1/admin/risk/circular-flows/${detectionId}/investigate?admin_id=${adminId}`,
+    `/api/me/admin/risk/circular-flows/${detectionId}/investigate?admin_id=${adminId}`,
     { notes, action }
   )
 }
@@ -459,7 +459,7 @@ export async function fetchRiskEvents(
   if (params?.page_size) searchParams.set('page_size', params.page_size.toString())
   
   const query = searchParams.toString()
-  const path = `/api/v1/admin/risk/events${query ? `?${query}` : ''}`
+  const path = `/api/me/admin/risk/events${query ? `?${query}` : ''}`
   
   return adminGetJson(accessToken, path)
 }
@@ -470,7 +470,7 @@ export async function fetchRiskEvents(
 export async function fetchRiskConfig(
   accessToken: string
 ): Promise<RiskConfig> {
-  return adminGetJson<RiskConfig>(accessToken, '/api/v1/admin/risk/config')
+  return adminGetJson<RiskConfig>(accessToken, '/api/me/admin/risk/config')
 }
 
 /**
@@ -480,5 +480,5 @@ export async function updateRiskConfig(
   accessToken: string,
   config: Partial<RiskConfig>
 ): Promise<{ status: string; config: Partial<RiskConfig> }> {
-  return adminPutJson(accessToken, '/api/v1/admin/risk/config', { config })
+  return adminPutJson(accessToken, '/api/me/admin/risk/config', { config })
 }

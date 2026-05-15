@@ -9,7 +9,7 @@ import { isPlatformAdminRole } from "@/lib/auth/roles";
 import { useAuthStore } from "@/stores/auth-store";
 
 function onAdminPath(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
+  return pathname.startsWith("/admin");
 }
 
 /** Routes platform admins may open without going to `/admin`. */

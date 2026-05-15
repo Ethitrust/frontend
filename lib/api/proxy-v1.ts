@@ -295,6 +295,93 @@ export async function proxyV1PatchJson(
 }
 
 /**
+ * Proxies `PUT ${NEXT_API_URL}{pathname}` with the incoming JSON body.
+ * `pathname` must start with `/api/v1`.
+ */
+export async function proxyV1PutJson(
+  request: Request,
+  pathname: string,
+): Promise<Response> {
+  const base = getApiBaseUrl();
+  if (!base) {
+    return Response.json(
+      { error: MISSING_API_BASE_ERROR },
+      { status: 503 },
+    );
+  }
+
+  const authHeader =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
+  if (!authHeader) {
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
+  }
+
+  const bodyText = await request.text();
+  const contentType =
+    request.headers.get("content-type")?.trim() || "application/json";
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const url = `${base}${path}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": contentType,
+        Authorization: authHeader,
+        ...(request.headers.get("x-organization-id")
+          ? { "X-Organization-Id": request.headers.get("x-organization-id")! }
+          : {}),
+      },
+      body: bodyText.length > 0 ? bodyText : undefined,
+      cache: "no-store",
+    });
+  } catch {
+    return Response.json(
+      { error: "Could not reach the API. Check your connection." },
+      { status: 502 },
+    );
+  }
+
+  const rawText = await res.text().catch(() => "");
+  let data: unknown;
+  if (rawText.trim()) {
+    try {
+      data = JSON.parse(rawText) as unknown;
+    } catch {
+      data = { raw: rawText };
+    }
+  } else {
+    data = {};
+  }
+
+  if (!res.ok) {
+    return Response.json(
+      {
+        error: formatUpstreamJsonError(
+          typeof data === "object" && data !== null
+            ? data
+            : { detail: String(data) },
+        ),
+      },
+      { status: res.status },
+    );
+  }
+
+  return Response.json(
+    typeof data === "object" && data !== null && !Array.isArray(data)
+      ? data
+      : { payload: data },
+    { status: res.status },
+  );
+}
+
+/**
  * Proxies `DELETE ${NEXT_API_URL}{pathname}`. Optionally forwards JSON body if present.
  * `pathname` must start with `/api/v1`.
  */
