@@ -197,7 +197,7 @@ export function OrganizationApplyView({
                 <form className="grid gap-6 sm:grid-cols-2" onSubmit={onSubmit}>
                   <div className="space-y-2.5 sm:col-span-2">
                     <Label htmlFor="org-name" className="flex items-center gap-1.5 text-sm font-medium">
-                      <Building className="size-4 text-muted-foreground" /> Legal or trading name
+                      <Building className="size-4 text-muted-foreground" /> Legal or trading name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="org-name"
@@ -212,7 +212,7 @@ export function OrganizationApplyView({
                   <div className="space-y-2.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Label htmlFor="org-slug" className="flex items-center gap-1.5 text-sm font-medium">
-                        Workspace slug
+                        Workspace slug <span className="text-destructive">*</span>
                       </Label>
                       <Button
                         type="button"
@@ -244,7 +244,7 @@ export function OrganizationApplyView({
                   </div>
                   <div className="space-y-2.5">
                     <Label htmlFor="org-tin" className="flex items-center gap-1.5 text-sm font-medium">
-                      <Hash className="size-4 text-muted-foreground" /> TIN
+                      <Hash className="size-4 text-muted-foreground" /> TIN <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="org-tin"
@@ -257,7 +257,7 @@ export function OrganizationApplyView({
                   </div>
                   <div className="space-y-2.5">
                     <Label htmlFor="org-email" className="flex items-center gap-1.5 text-sm font-medium">
-                      Contact Email
+                      Contact Email <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="org-email"
@@ -270,7 +270,7 @@ export function OrganizationApplyView({
                   </div>
                   <div className="space-y-2.5">
                     <Label htmlFor="org-phone" className="flex items-center gap-1.5 text-sm font-medium">
-                      Phone Number
+                      Phone Number <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="org-phone"
@@ -282,7 +282,7 @@ export function OrganizationApplyView({
                   </div>
                   <div className="space-y-2.5 sm:col-span-2">
                     <Label htmlFor="org-address" className="flex items-center gap-1.5 text-sm font-medium">
-                      Business Address
+                      Business Address <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="org-address"

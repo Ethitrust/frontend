@@ -62,8 +62,6 @@ export function OrgSettingsProfileForm({
       phone_number: profile.phone_number,
       address: profile.address,
       tin: profile.tin,
-      webhook_url: profile.webhook_url,
-      webhook_secret: profile.webhook_secret,
     },
   })
 
@@ -76,8 +74,6 @@ export function OrgSettingsProfileForm({
       phone_number: profile.phone_number,
       address: profile.address,
       tin: profile.tin,
-      webhook_url: profile.webhook_url,
-      webhook_secret: profile.webhook_secret,
     })
   }, [profile.org_id, profile.updated_at, form, profile])
 
@@ -187,32 +183,6 @@ export function OrgSettingsProfileForm({
                     <FormLabel>TIN</FormLabel>
                     <FormControl>
                       <Input disabled className="rounded-lg" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="webhook_url"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Webhook URL</FormLabel>
-                    <FormControl>
-                      <Input className="rounded-lg font-mono text-xs" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="webhook_secret"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Webhook secret</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="off" className="rounded-lg font-mono text-xs" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
