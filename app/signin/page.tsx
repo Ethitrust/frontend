@@ -1,3 +1,5 @@
+import { Suspense } from 'react'
+
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
 import { LoginForm } from '@/components/auth/login-form'
 
@@ -9,7 +11,9 @@ export const metadata = {
 export default function SignInPage() {
   return (
     <AuthPageShell>
-      <LoginForm />
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
     </AuthPageShell>
   )
 }
