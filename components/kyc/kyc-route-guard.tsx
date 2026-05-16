@@ -14,8 +14,8 @@ export const KYC_REDIRECT_KEY = 'ethitrust:kyc-redirect'
  * Route patterns that require a VERIFIED kyc_status.
  * Checked with `startsWith` so sub-routes are also gated.
  */
-const KYC_PROTECTED_PREFIXES = [
-  '/escrows/new',
+const KYC_PROTECTED_PREFIXES: string[] = [
+  // '/escrows/new' is now protected by a visual form overlay instead of a hard redirect
 ]
 
 /**
