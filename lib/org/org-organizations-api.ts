@@ -169,14 +169,57 @@ export async function postOrgInvite(accessToken: string, orgId: string, payload:
 }
 
 export async function deleteOrgMember(accessToken: string, orgId: string, userId: string): Promise<void> {
-  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/remove-member`, {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}`, {
     method: 'DELETE',
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ user_id: userId }),
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+}
+
+export async function pauseOrgMember(accessToken: string, orgId: string, userId: string): Promise<void> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}/pause`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+}
+
+export async function resumeOrgMember(accessToken: string, orgId: string, userId: string): Promise<void> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}/resume`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+}
+
+export async function cancelOrgInvite(accessToken: string, orgId: string, inviteId: string): Promise<void> {
+  const res = await fetch(`/api/me/organizations/${encodeURIComponent(orgId)}/invites/${encodeURIComponent(inviteId)}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     cache: 'no-store',
   })
   const data = await parseJson(res)
