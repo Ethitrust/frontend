@@ -52,7 +52,11 @@ export function SignupForm({ className }: { className?: string }) {
     registerMutation.mutate(values, {
       onSuccess: () => {
         form.reset()
-        router.push(`/verify-email?email=${encodeURIComponent(values.email.trim())}`)
+        // Forward the `next` param so invite intent survives through email verification.
+        const nextParam = searchParams.get('next')
+        const safeNext = nextParam && nextParam.startsWith('/') ? nextParam : null
+        const verifyUrl = `/verify-email?email=${encodeURIComponent(values.email.trim())}${safeNext ? `&next=${encodeURIComponent(safeNext)}` : ''}`
+        router.push(verifyUrl)
       },
     })
   }

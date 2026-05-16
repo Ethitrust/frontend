@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils'
 
 export function LoginForm({ className }: { className?: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const loginMutation = useLoginMutation()
 
   const form = useForm<LoginPayload>({
@@ -50,7 +51,13 @@ export function LoginForm({ className }: { className?: string }) {
     loginMutation.mutate(values, {
       onSuccess: async (data) => {
         form.reset({ ...values, password: '' })
-        let nextPath = '/dashboard'
+
+        // Honour the `next` query param for invite / KYC redirect flows.
+        // Validate it starts with `/` to prevent open-redirect attacks.
+        const nextParam = searchParams.get('next')
+        const safeNext = nextParam && nextParam.startsWith('/') ? nextParam : null
+
+        let nextPath = safeNext || '/dashboard'
         try {
           const me = await fetchAuthMe(data.access_token)
           if (isPlatformAdminRole(me.role)) nextPath = '/admin'

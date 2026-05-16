@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { IdCard, Mail, ShieldCheck, Fingerprint, Info } from "lucide-react";
+import { IdCard, Mail, ShieldCheck, Fingerprint, Info, CheckCircle2, ArrowRight } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +19,10 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KycSessionGate } from "@/components/kyc/kyc-session-gate";
+import { KYC_REDIRECT_KEY } from "@/components/kyc/kyc-route-guard";
 import { fetchAuthMe, fetchAuthProfile } from "@/lib/auth/me-session-api";
 import { formatEscrowDateTime } from "@/lib/escrows/format-escrow";
-import { presentKycStatus } from "@/lib/kyc/kyc-presentation";
+import { isKycCompleted, presentKycStatus } from "@/lib/kyc/kyc-presentation";
 import { ethitrustThemeTokens } from "@/lib/ethitrust-theme";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +39,11 @@ export function KycOverviewView() {
 
 function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
   const e = ethitrustThemeTokens;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [redirectTarget, setRedirectTarget] = useState<string | null>(null);
+  const [redirectCountdown, setRedirectCountdown] = useState(3);
 
   const meQuery = useQuery({
     queryKey: ["me", "auth", "me"],
@@ -51,6 +59,40 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
   const me = meQuery.data;
   const profile = profileQuery.data;
   const kyc = profile ? presentKycStatus(profile.kyc_status) : null;
+  const verified = isKycCompleted(profile?.kyc_status);
+
+  // Auto-redirect verified users back to their original destination
+  useEffect(() => {
+    if (!verified || loading) return;
+
+    // Check `next` search param first, then sessionStorage
+    const nextParam = searchParams.get('next');
+    let target: string | null = null;
+    if (nextParam && nextParam.startsWith('/')) {
+      target = nextParam;
+    } else {
+      try {
+        target = sessionStorage.getItem(KYC_REDIRECT_KEY);
+        if (target) sessionStorage.removeItem(KYC_REDIRECT_KEY);
+      } catch { /* ignore */ }
+    }
+
+    if (!target) return;
+    setRedirectTarget(target);
+
+    // Countdown timer
+    let count = 3;
+    const interval = setInterval(() => {
+      count -= 1;
+      setRedirectCountdown(count);
+      if (count <= 0) {
+        clearInterval(interval);
+        router.push(target!);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [verified, loading, searchParams, router]);
 
   return (
     <div className={cn(e.layout.container, "py-8 lg:py-12")}>
@@ -77,6 +119,28 @@ function KycOverviewSignedIn({ accessToken }: { accessToken: string }) {
           review is required.
         </p>
       </header>
+
+      {/* Post-verification redirect banner */}
+      {redirectTarget && (
+        <Alert className="mt-8 border-green-200 bg-green-50/80 text-green-950 dark:border-green-900 dark:bg-green-950/30 dark:text-green-100">
+          <CheckCircle2 className="size-4 shrink-0 text-green-600" aria-hidden />
+          <AlertTitle>Identity verified!</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            <span>
+              Redirecting you back in {redirectCountdown}s…
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full border-green-800/40"
+              onClick={() => router.push(redirectTarget)}
+            >
+              Go now
+              <ArrowRight className="ml-1 size-3" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {meQuery.isError ? (
         <Alert variant="destructive" className="mt-8">

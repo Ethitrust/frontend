@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { MenuIcon, UserIcon } from 'lucide-react'
+import { Lock, MenuIcon, ShieldAlert, UserIcon } from 'lucide-react'
+
+import { useKycGuard } from '@/components/kyc/kyc-guard-provider'
 
 import { AdminSidebarNav } from '@/components/admin/admin-sidebar-nav'
 import { ModeratorSidebarNav } from '@/components/moderator/moderator-sidebar-nav'
@@ -41,6 +43,7 @@ function UserWorkspaceNavBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() ?? ''
   const { typography } = ethitrustThemeTokens
   const accessToken = useAuthStore((s) => s.accessToken)
+  const { isKycVerified, isKycLoading } = useKycGuard()
 
   const orgsQuery = useQuery({
     queryKey: ['me', 'organizations'],
@@ -53,6 +56,30 @@ function UserWorkspaceNavBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="flex flex-col gap-6" aria-label="Workspace">
+      {/* KYC status banner — visible when user is logged in but not verified */}
+      {accessToken && !isKycLoading && !isKycVerified && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="flex items-start gap-2">
+            <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                KYC required
+              </p>
+              <p className="mt-0.5 text-[0.65rem] leading-snug text-amber-700 dark:text-amber-400">
+                Verify your identity to unlock escrow and wallet features.
+              </p>
+              <Link
+                href="/kyc"
+                onClick={onNavigate}
+                className="mt-1.5 inline-flex items-center gap-1 text-[0.65rem] font-semibold text-amber-800 underline underline-offset-2 transition-colors hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+              >
+                Verify now →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {sections.map((section) => (
         <div key={section.heading}>
           <p className={cn(typography.eyebrow, 'mb-2 px-2 text-[0.65rem] opacity-80')}>
@@ -62,21 +89,27 @@ function UserWorkspaceNavBody({ onNavigate }: { onNavigate?: () => void }) {
             {section.items.map((item) => {
               const Icon = item.icon
               const active = isUserNavItemActive(pathname, item)
+              const locked = Boolean(item.requiresKyc) && !isKycVerified && !isKycLoading && Boolean(accessToken)
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    href={locked ? '/kyc' : item.href}
                     onClick={onNavigate}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      active
+                      locked && 'opacity-50',
+                      active && !locked
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                     )}
-                    aria-current={active ? 'page' : undefined}
+                    aria-current={active && !locked ? 'page' : undefined}
+                    title={locked ? 'Complete KYC verification to unlock' : undefined}
                   >
                     <Icon className="size-4 shrink-0 opacity-80" aria-hidden />
                     <span className="min-w-0 truncate">{item.label}</span>
+                    {locked && (
+                      <Lock className="ml-auto size-3 shrink-0 text-muted-foreground/60" aria-label="Locked — KYC required" />
+                    )}
                   </Link>
                 </li>
               )

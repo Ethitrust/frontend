@@ -17,6 +17,8 @@ export type UserNavItem = {
   icon: LucideIcon
   /** When set, item is active for any route under `/org/[id]/…` (org hub links). */
   orgScopeHighlightId?: string
+  /** When true, the sidebar renders a lock indicator if the user's KYC is not verified. */
+  requiresKyc?: boolean
 }
 
 export type UserNavSection = {
@@ -32,8 +34,8 @@ export const USER_NAV_CORE_SECTIONS: UserNavSection[] = [
   {
     heading: 'Transact',
     items: [
-      { label: 'Escrows', href: '/escrows', icon: Handshake },
-      { label: 'Wallet', href: '/wallet', icon: Landmark },
+      { label: 'Escrows', href: '/escrows', icon: Handshake, requiresKyc: true },
+      { label: 'Wallet', href: '/wallet', icon: Landmark, requiresKyc: true },
     ],
   },
   {
