@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Card,
   CardContent,
@@ -69,6 +70,7 @@ export function AdminOrgApplicationDetailView({
 
   const [reviewAction, setReviewAction] = useState('approve')
   const [reviewNote, setReviewNote] = useState('')
+  const [skipPayment, setSkipPayment] = useState(false)
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [unsuspendOpen, setUnsuspendOpen] = useState(false)
   const [moderationReason, setModerationReason] = useState('')
@@ -92,10 +94,12 @@ export function AdminOrgApplicationDetailView({
       postAdminOrgApplicationReview(accessToken, applicationId, {
         action: reviewAction,
         note: reviewNote.trim() || undefined,
+        skip_payment: reviewAction === 'approve' ? skipPayment : undefined,
       }),
     onSuccess: () => {
       toast.success('Review recorded')
       setReviewNote('')
+      setSkipPayment(false)
       invalidate()
     },
     onError: (err: Error) => toast.error(err.message),
@@ -341,6 +345,27 @@ export function AdminOrgApplicationDetailView({
                           <li>Send a welcome email with integration guides</li>
                         </ul>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {reviewAction === 'approve' && row.status === "pending" && (
+                  <div className="flex items-center space-x-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+                    <Checkbox
+                      id="skip-payment"
+                      checked={skipPayment}
+                      onCheckedChange={(checked) => setSkipPayment(checked as boolean)}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label
+                        htmlFor="skip-payment"
+                        className="text-sm font-semibold leading-none cursor-pointer"
+                      >
+                        Skip Activation Payment
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">
+                        Organization will be set to "active" immediately instead of "pending_payment".
+                      </p>
                     </div>
                   </div>
                 )}

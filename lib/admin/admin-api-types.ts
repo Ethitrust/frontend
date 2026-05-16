@@ -180,6 +180,7 @@ export type AdminOrgApplicationDetail = AdminOrgApplicationRow & {
 export type AdminOrgApplicationReviewBody = {
   action: string;
   note?: string | null;
+  skip_payment?: boolean;
 };
 
 export type AdminOrgSuspendBody = {
