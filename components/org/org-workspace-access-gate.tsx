@@ -60,7 +60,7 @@ export function OrgWorkspaceAccessGate({ orgId, children }: { orgId: string; chi
       window.location.href = data.payment_url
     },
     onError: (error) => {
-      toast.error('Could not initialize payment. Please try again.')
+      toast.error(error instanceof Error ? error.message : 'Could not initialize payment. Please try again.')
       console.error(error)
     },
   })
