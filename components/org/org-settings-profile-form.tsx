@@ -35,9 +35,11 @@ import { useAuthStore } from '@/stores/auth-store'
 export function OrgSettingsProfileForm({
   orgId,
   profile,
+  isOwner,
 }: {
   orgId: string
   profile: OrganizationProfileRow
+  isOwner: boolean
 }) {
   const queryClient = useQueryClient()
   const accessToken = useAuthStore((s) => s.accessToken)
@@ -130,7 +132,11 @@ export function OrgSettingsProfileForm({
                   <FormItem className="md:col-span-2">
                     <FormLabel>Logo URL</FormLabel>
                     <FormControl>
-                      <Input className="rounded-lg font-mono text-xs" {...field} />
+                      <Input
+                        disabled={!isOwner}
+                        className="rounded-lg font-mono text-xs"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -143,7 +149,13 @@ export function OrgSettingsProfileForm({
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" autoComplete="email" className="rounded-lg" {...field} />
+                      <Input
+                        disabled={!isOwner}
+                        type="email"
+                        autoComplete="email"
+                        className="rounded-lg"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -156,7 +168,11 @@ export function OrgSettingsProfileForm({
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input className="rounded-lg" {...field} />
+                      <Input
+                        disabled={!isOwner}
+                        className="rounded-lg"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -169,7 +185,11 @@ export function OrgSettingsProfileForm({
                   <FormItem className="md:col-span-2">
                     <FormLabel>Address</FormLabel>
                     <FormControl>
-                      <Input className="rounded-lg" {...field} />
+                      <Input
+                        disabled={!isOwner}
+                        className="rounded-lg"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -189,9 +209,15 @@ export function OrgSettingsProfileForm({
                 )}
               />
             </div>
-            <Button type="submit" className="rounded-full" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving…' : 'Save changes'}
-            </Button>
+            {isOwner && (
+              <Button
+                type="submit"
+                className="rounded-full"
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            )}
           </form>
         </Form>
       </CardContent>

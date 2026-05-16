@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Crown,
@@ -14,6 +14,7 @@ import {
   UserPlus,
   Users,
   XCircle,
+  type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -67,7 +68,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 const ROLE_META: Record<
   string,
-  { label: string; icon: React.ElementType; color: string; permissions: string[] }
+  { label: string; icon: LucideIcon; color: string; permissions: string[] }
 > = {
   owner: {
     label: 'Owner',
@@ -162,10 +163,15 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
     enabled: Boolean(accessToken && orgId),
   })
 
+  const members = membersQuery.data ?? []
+  const myMember = members.find((m: any) => m.user_id === currentUserId)
+  const myRole = myMember?.role ?? 'member'
+  const isCurrentUserOwner = myRole === 'owner'
+
   const invitesQuery = useQuery({
     queryKey: ['me', 'organizations', orgId, 'invites'],
     queryFn: () => fetchOrgInvites(accessToken!, orgId),
-    enabled: Boolean(accessToken && orgId),
+    enabled: Boolean(accessToken && orgId && isCurrentUserOwner),
   })
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -218,7 +224,6 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const members = membersQuery.data ?? []
   const invites = invitesQuery.data ?? []
 
   const anyPending =
@@ -242,7 +247,9 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
             Team Members
           </CardTitle>
           <CardDescription className="mt-1">
-            Manage who has access to this workspace. Only the <strong>Owner</strong> can manage the team.
+            {isCurrentUserOwner
+              ? 'Manage who has access to this workspace. Only the Owner can manage the team.'
+              : 'View team members of this organization.'}
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
@@ -285,81 +292,83 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
             </DialogContent>
           </Dialog>
 
-          {/* Invite button */}
-          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" className="rounded-full gap-2">
-                <UserPlus className="size-4" />
-                Invite member
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Invite a team member</DialogTitle>
-                <DialogDescription>
-                  Enter their email and choose a role. They will receive an invitation email with a
-                  one-click link to join. The invitation expires in <strong>2 days</strong>.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="invite-email">Email address</Label>
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    placeholder="colleague@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="invite-role">Role</Label>
-                  <Select value={inviteRole} onValueChange={setInviteRole}>
-                    <SelectTrigger id="invite-role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(ROLE_META).filter(([k]) => k !== 'owner').map(([key, meta]) => {
-                        const Icon = meta.icon
-                        return (
-                          <SelectItem key={key} value={key}>
-                            <span className={`flex items-center gap-2 ${meta.color}`}>
-                              <Icon className="size-3.5" />
-                              {meta.label}
-                            </span>
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {ROLE_META[inviteRole]?.permissions.slice(0, 2).join(' · ')}
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => setInviteOpen(false)}
-                >
-                  Cancel
+          {/* Invite button — Only for Owners */}
+          {isCurrentUserOwner && (
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogTrigger asChild>
+                <Button variant="default" className="rounded-full gap-2">
+                  <UserPlus className="size-4" />
+                  Invite member
                 </Button>
-                <Button
-                  type="button"
-                  className="rounded-full"
-                  disabled={!inviteEmail || inviteMutation.isPending}
-                  onClick={() => inviteMutation.mutate()}
-                >
-                  {inviteMutation.isPending ? (
-                    <Loader2Icon className="mr-2 size-4 animate-spin" />
-                  ) : null}
-                  Send invite
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Invite a team member</DialogTitle>
+                  <DialogDescription>
+                    Enter their email and choose a role. They will receive an invitation email with a
+                    one-click link to join. The invitation expires in <strong>2 days</strong>.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-email">Email address</Label>
+                    <Input
+                      id="invite-email"
+                      type="email"
+                      placeholder="colleague@example.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-role">Role</Label>
+                    <Select value={inviteRole} onValueChange={setInviteRole}>
+                      <SelectTrigger id="invite-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ROLE_META).filter(([k]) => k !== 'owner').map(([key, meta]) => {
+                          const Icon = meta.icon
+                          return (
+                            <SelectItem key={key} value={key}>
+                              <span className={`flex items-center gap-2 ${meta.color}`}>
+                                <Icon className="size-3.5" />
+                                {meta.label}
+                              </span>
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {ROLE_META[inviteRole]?.permissions.slice(0, 2).join(' · ')}
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setInviteOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="rounded-full"
+                    disabled={!inviteEmail || inviteMutation.isPending}
+                    onClick={() => inviteMutation.mutate()}
+                  >
+                    {inviteMutation.isPending ? (
+                      <Loader2Icon className="mr-2 size-4 animate-spin" />
+                    ) : null}
+                    Send invite
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </CardHeader>
 
@@ -381,14 +390,13 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Joined / Invited</th>
-                <th className="px-6 py-3 font-medium text-right">Actions</th>
+                {isCurrentUserOwner && <th className="px-6 py-3 font-medium text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {/* ── Active members ── */}
               {members.map((m: any) => {
                 const isSelf = m.user_id === currentUserId
-                const isOwner = m.role === 'owner'
                 const displayName = m.user_name || 'Unknown user'
                 const displayEmail = m.user_email || ''
 
@@ -450,68 +458,70 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
                       {formatEscrowDateTime(m.created_at)}
                     </td>
 
-                    {/* Actions — only shown for non-self, non-owner targets */}
-                    <td className="px-6 py-3 text-right">
-                      {!isSelf && !isOwner ? (
-                        <div className="flex justify-end gap-1">
-                          {m.is_active ? (
+                    {/* Actions — only shown if current user is Owner and target is not self/owner */}
+                    {isCurrentUserOwner && (
+                      <td className="px-6 py-3 text-right">
+                        {!isSelf && m.role !== 'owner' ? (
+                          <div className="flex justify-end gap-1">
+                            {m.is_active ? (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                      disabled={anyPending}
+                                      onClick={() => pauseMemberMutation.mutate(m.user_id)}
+                                    >
+                                      <Pause className="size-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Pause access</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                      disabled={anyPending}
+                                      onClick={() => resumeMemberMutation.mutate(m.user_id)}
+                                    >
+                                      <Play className="size-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Restore access</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             <TooltipProvider delayDuration={100}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="size-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    className="size-8 text-destructive hover:bg-destructive/10"
                                     disabled={anyPending}
-                                    onClick={() => pauseMemberMutation.mutate(m.user_id)}
+                                    onClick={() => confirmRemove(m.user_id, displayName)}
                                   >
-                                    <Pause className="size-4" />
+                                    <Trash2 className="size-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Pause access</TooltipContent>
+                                <TooltipContent>Remove member</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          ) : (
-                            <TooltipProvider delayDuration={100}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                    disabled={anyPending}
-                                    onClick={() => resumeMemberMutation.mutate(m.user_id)}
-                                  >
-                                    <Play className="size-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Restore access</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8 text-destructive hover:bg-destructive/10"
-                                  disabled={anyPending}
-                                  onClick={() => confirmRemove(m.user_id, displayName)}
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Remove member</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground pr-2">
-                          {isSelf ? 'You' : 'Owner'}
-                        </span>
-                      )}
-                    </td>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground pr-2">
+                            {isSelf ? 'You' : 'Owner'}
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -551,30 +561,32 @@ export function OrgSettingsTeamActions({ orgId }: { orgId: string }) {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">—</td>
-                  <td className="px-6 py-3 text-right">
-                    {i.status === 'pending' && (
-                      <TooltipProvider delayDuration={100}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              disabled={cancelInviteMutation.isPending}
-                              onClick={() => {
-                                if (window.confirm(`Cancel the invitation to ${i.email}?`)) {
-                                  cancelInviteMutation.mutate(i.id)
-                                }
-                              }}
-                            >
-                              <XCircle className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Cancel invitation</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </td>
+                  {isCurrentUserOwner && (
+                    <td className="px-6 py-3 text-right">
+                      {i.status === 'pending' && (
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                disabled={cancelInviteMutation.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`Cancel the invitation to ${i.email}?`)) {
+                                    cancelInviteMutation.mutate(i.id)
+                                  }
+                                }}
+                              >
+                                <XCircle className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Cancel invitation</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
 

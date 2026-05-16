@@ -23,8 +23,10 @@ import { formatEscrowDateTime } from "@/lib/escrows/format-escrow";
 import {
   deleteOrgApiKey,
   fetchOrgApiKeys,
+  fetchOrgMembers,
   fetchOrgProfile,
 } from "@/lib/org/org-organizations-api";
+import { fetchAuthMe } from "@/lib/auth/me-session-api";
 import { ethitrustThemeTokens } from "@/lib/ethitrust-theme";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -41,10 +43,33 @@ export function OrgSettingsView({ orgId }: { orgId: string }) {
     staleTime: 30_000,
   });
 
+  const membersQuery = useQuery({
+    queryKey: ["me", "organizations", orgId, "members"],
+    queryFn: () => fetchOrgMembers(accessToken!, orgId),
+    enabled: Boolean(accessToken && orgId),
+    staleTime: 60_000,
+  });
+
+  const meQuery = useQuery({
+    queryKey: ["me", "auth", "me"],
+    queryFn: () => fetchAuthMe(accessToken!),
+    enabled: Boolean(accessToken),
+    staleTime: 5 * 60_000,
+  });
+
+  const currentUserId = meQuery.data?.id;
+  const members = membersQuery.data ?? [];
+  const myMember = members.find((m) => m.user_id === currentUserId);
+  const myRole = myMember?.role ?? "member";
+
+  const isOwner = myRole === "owner";
+  const isAdmin = myRole === "admin";
+  const canSeeKeys = isOwner || isAdmin;
+
   const keysQuery = useQuery({
     queryKey: ["me", "organizations", orgId, "api-keys"],
     queryFn: () => fetchOrgApiKeys(accessToken!, orgId),
-    enabled: Boolean(accessToken && orgId),
+    enabled: Boolean(accessToken && orgId && canSeeKeys),
     staleTime: 30_000,
   });
 
@@ -93,24 +118,13 @@ export function OrgSettingsView({ orgId }: { orgId: string }) {
         </h1>
       </header>
 
-      {(profileQuery.isError || keysQuery.isError) && (
+      {profileQuery.isError && (
         <Alert variant="destructive" className="mt-10">
           <AlertTitle>Could not load settings</AlertTitle>
-          <AlertDescription className="space-y-2">
-            {profileQuery.isError ? (
-              <span className="block">
-                {profileQuery.error instanceof Error
-                  ? profileQuery.error.message
-                  : ""}
-              </span>
-            ) : null}
-            {keysQuery.isError ? (
-              <span className="block">
-                {keysQuery.error instanceof Error
-                  ? keysQuery.error.message
-                  : ""}
-              </span>
-            ) : null}
+          <AlertDescription>
+            {profileQuery.error instanceof Error
+              ? profileQuery.error.message
+              : "An unexpected error occurred."}
           </AlertDescription>
         </Alert>
       )}
@@ -146,84 +160,100 @@ export function OrgSettingsView({ orgId }: { orgId: string }) {
             </Alert>
           )}
 
-          <OrgSettingsProfileForm orgId={orgId} profile={profile} />
+          <OrgSettingsProfileForm
+            orgId={orgId}
+            profile={profile}
+            isOwner={isOwner}
+          />
           
           <OrgSettingsTeamActions orgId={orgId} />
 
-          <Card className="shadow-sm">
-            <CardHeader className="flex-row flex-wrap items-center justify-between gap-4 space-y-0 border-b">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <KeyRound
-                    className="size-4 text-muted-foreground"
-                    aria-hidden
-                  />
-                  API keys
-                </CardTitle>
-                <CardDescription>
-                  <span className="font-mono text-xs">POST …/api-keys</span>{" "}
-                  with{" "}
-                  <span className="font-mono text-xs">{`{ key_name }`}</span>
-                </CardDescription>
-              </div>
-              <OrgSettingsApiKeyActions orgId={orgId} />
-            </CardHeader>
-            <CardContent className="px-0 pb-0 pt-0">
-              {keys.length === 0 ? (
-                <p className="px-6 py-12 text-center text-sm text-muted-foreground">
-                  No API keys yet.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-xl text-left text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
-                        <th className="px-6 py-3 font-medium">Name</th>
-                        <th className="px-4 py-3 font-medium">Status</th>
-                        <th className="px-6 py-3 font-medium">Created</th>
-                        <th className="px-6 py-3 font-medium text-right">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {keys.map((k) => (
-                        <tr
-                          key={k.id}
-                          className="border-b border-border/60 last:border-0"
-                        >
-                          <td className="px-6 py-3 font-medium">
-                            {k.key_name}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge
-                              variant={k.is_active ? "secondary" : "outline"}
-                            >
-                              {k.is_active ? "active" : "inactive"}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-3 tabular-nums text-xs text-muted-foreground">
-                            {formatEscrowDateTime(k.created_at)}
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              disabled={revokeMutation.isPending}
-                              onClick={() => confirmRevoke(k.id, k.key_name)}
-                            >
-                              Revoke
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {canSeeKeys && (
+            <Card className="shadow-sm">
+              <CardHeader className="flex-row flex-wrap items-center justify-between gap-4 space-y-0 border-b">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <KeyRound
+                      className="size-4 text-muted-foreground"
+                      aria-hidden
+                    />
+                    API keys
+                  </CardTitle>
+                  <CardDescription>
+                    <span className="font-mono text-xs">POST …/api-keys</span>{" "}
+                    with{" "}
+                    <span className="font-mono text-xs">{`{ key_name }`}</span>
+                  </CardDescription>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                {isOwner && <OrgSettingsApiKeyActions orgId={orgId} />}
+              </CardHeader>
+              <CardContent className="px-0 pb-0 pt-0">
+                {keysQuery.isError ? (
+                  <p className="px-6 py-12 text-center text-sm text-destructive">
+                    {keysQuery.error instanceof Error
+                      ? keysQuery.error.message
+                      : "Could not load API keys"}
+                  </p>
+                ) : keys.length === 0 ? (
+                  <p className="px-6 py-12 text-center text-sm text-muted-foreground">
+                    No API keys yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-xl text-left text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
+                          <th className="px-6 py-3 font-medium">Name</th>
+                          <th className="px-4 py-3 font-medium">Status</th>
+                          <th className="px-6 py-3 font-medium">Created</th>
+                          {isOwner && (
+                            <th className="px-6 py-3 font-medium text-right">
+                              Actions
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {keys.map((k) => (
+                          <tr
+                            key={k.id}
+                            className="border-b border-border/60 last:border-0"
+                          >
+                            <td className="px-6 py-3 font-medium">
+                              {k.key_name}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={k.is_active ? "secondary" : "outline"}
+                              >
+                                {k.is_active ? "active" : "inactive"}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-3 tabular-nums text-xs text-muted-foreground">
+                              {formatEscrowDateTime(k.created_at)}
+                            </td>
+                            {isOwner && (
+                              <td className="px-6 py-3 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  disabled={revokeMutation.isPending}
+                                  onClick={() => confirmRevoke(k.id, k.key_name)}
+                                >
+                                  Revoke
+                                </Button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       ) : (
         !profileQuery.isPending &&
