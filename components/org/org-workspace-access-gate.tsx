@@ -28,7 +28,7 @@ export function OrgWorkspaceAccessGate({ orgId, children }: { orgId: string; chi
     staleTime: 60_000,
   })
 
-  const txRef = searchParams?.get('tx_ref')
+  const txRef = searchParams?.get('tx_ref') || searchParams?.get('trx_ref') || searchParams?.get('transaction_id')
 
   const verifyMutation = useMutation({
     mutationFn: async (ref: string) => {
