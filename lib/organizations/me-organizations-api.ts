@@ -4,6 +4,8 @@ import { getBffErrorMessage } from '@/lib/api/upstream-errors'
 
 import type {
   BusinessLicenseUploadResponse,
+  MeInviteRow,
+  MeInviteStatusFilter,
   OrgApplyResponse,
   OrganizationRow,
   OrgInviteDecisionResponse,
@@ -122,7 +124,73 @@ export async function postOrgInviteDecision(
   if (!res.ok) {
     throw new Error(getBffErrorMessage(data))
   }
-  if (!data || typeof data !== 'object' || typeof (data as OrganizationRow).id !== 'string') {
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    typeof (data as OrgInviteDecisionResponse).decision !== 'string'
+  ) {
+    throw new Error('Unexpected invite decision response.')
+  }
+  return data as OrgInviteDecisionResponse
+}
+
+/**
+ * `GET /api/v1/organizations/invites/me` — list invitations addressed to the
+ * current user. Optional `status` filter narrows the result.
+ */
+export async function fetchMeInvites(
+  accessToken: string,
+  status?: MeInviteStatusFilter,
+): Promise<MeInviteRow[]> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : ''
+  const res = await fetch(`/api/me/organizations/invites/me${qs}`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  })
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (!Array.isArray(data)) {
+    throw new Error('Unexpected invites response.')
+  }
+  return data as MeInviteRow[]
+}
+
+/**
+ * `POST /api/v1/organizations/invites/me/{invite_id}/decision` — accept or
+ * reject a single invitation addressed to the current user.
+ */
+export async function postMeInviteDecision(
+  accessToken: string,
+  inviteId: string,
+  decision: 'accept' | 'reject',
+): Promise<OrgInviteDecisionResponse> {
+  const res = await fetch(
+    `/api/me/organizations/invites/me/${encodeURIComponent(inviteId)}/decision`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ decision }),
+      cache: 'no-store',
+    },
+  )
+  const data = await parseJson(res)
+  if (!res.ok) {
+    throw new Error(getBffErrorMessage(data))
+  }
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    typeof (data as OrgInviteDecisionResponse).decision !== 'string'
+  ) {
     throw new Error('Unexpected invite decision response.')
   }
   return data as OrgInviteDecisionResponse

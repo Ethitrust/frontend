@@ -33,7 +33,48 @@ export type BusinessLicenseUploadResponse = {
   content_type: string
 }
 
-export type OrgInviteDecisionResponse = OrganizationRow
+/**
+ * Response shape for accepting/declining an org invitation.
+ * The backend confirms the decision and provides a human-readable message
+ * (it does NOT return the organization row).
+ */
+export type OrgInviteDecisionResponse = {
+  decision: 'accepted' | 'rejected' | string
+  message: string
+}
+
+/**
+ * Allowed values for the `status` filter on `GET /organizations/invites/me`.
+ * `answered` is a server-side convenience meaning `accepted | rejected`.
+ */
+export type MeInviteStatusFilter =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired'
+  | 'answered'
+
+/**
+ * Row shape returned by `GET /organizations/invites/me`. Mirrors the existing
+ * pending-invite shape used by the org admin team view, plus org context.
+ */
+export type MeInviteRow = {
+  id: string
+  email: string
+  role: string
+  status: string
+  /** ISO 8601. May be absent if the invite hasn't been issued an expiry. */
+  expires_at?: string | null
+  created_at?: string | null
+  /** Org id that issued the invite. */
+  org_id: string
+  /** Pretty name of the issuing org, when the server includes it. */
+  org_name?: string | null
+  org_slug?: string | null
+  /** Display name of who sent the invite, when available. */
+  invited_by?: string | null
+}
 
 /** GET/PATCH `/api/v1/organizations/{org_id}/profile` */
 

@@ -3,7 +3,11 @@
 import { Suspense } from 'react'
 
 import { OrganizationApplyView } from '@/components/organizations/organization-apply-view'
-import { OrgInvitesLoading, OrgInvitesView } from '@/components/organizations/org-invites-view'
+import {
+  OrgInviteDecisionView,
+  OrgInvitesLoading,
+  OrgInvitesView,
+} from '@/components/organizations/org-invites-view'
 import { OrganizationsSessionGate } from '@/components/organizations/organizations-session-gate'
 
 export function OrganizationsApplyRoute() {
@@ -21,11 +25,26 @@ export function OrgInvitesRoute() {
   return (
     <OrganizationsSessionGate
       title="Team invites"
-      description="Handle workspace invitations securely. Incoming links populate organization and invitation tokens automatically when present."
+      description="Review and respond to workspace invitations addressed to your account."
     >
       {(token) => (
         <Suspense fallback={<OrgInvitesLoading />}>
           <OrgInvitesView accessToken={token} />
+        </Suspense>
+      )}
+    </OrganizationsSessionGate>
+  )
+}
+
+export function OrgInviteDecisionRoute() {
+  return (
+    <OrganizationsSessionGate
+      title="Respond to invitation"
+      description="You followed a workspace invitation link. Sign in to accept or decline it."
+    >
+      {(token) => (
+        <Suspense fallback={<OrgInvitesLoading />}>
+          <OrgInviteDecisionView accessToken={token} />
         </Suspense>
       )}
     </OrganizationsSessionGate>

@@ -39,6 +39,14 @@ export function LoginForm({ className }: { className?: string }) {
   const searchParams = useSearchParams()
   const loginMutation = useLoginMutation()
 
+  // Forward `?next=` to the signup link so users keep their post-auth target.
+  const nextParamForLink = searchParams.get('next')
+  const safeNextForLink =
+    nextParamForLink && nextParamForLink.startsWith('/') ? nextParamForLink : null
+  const signupHref = safeNextForLink
+    ? `/signup?next=${encodeURIComponent(safeNextForLink)}`
+    : '/signup'
+
   const form = useForm<LoginPayload>({
     resolver: zodResolver(loginPayloadSchema),
     defaultValues: {
@@ -154,7 +162,7 @@ export function LoginForm({ className }: { className?: string }) {
             <p className="text-center text-sm text-muted-foreground">
               Need an account?{' '}
               <Link
-                href="/signup"
+                href={signupHref}
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 Create one
