@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AppToaster } from "@/components/app-toaster";
@@ -70,7 +71,9 @@ export default function RootLayout({
         >
           <EthitrustThemeProvider>
             <QueryProvider>
-              <SessionRoleGate>{children}</SessionRoleGate>
+              <Suspense fallback={null}>
+                <SessionRoleGate>{children}</SessionRoleGate>
+              </Suspense>
               <AppToaster />
             </QueryProvider>
           </EthitrustThemeProvider>
