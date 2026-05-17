@@ -1,59 +1,59 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import { AppToaster } from '@/components/app-toaster'
-import { SessionRoleGate } from '@/components/auth/session-role-gate'
-import { EthitrustThemeProvider } from '@/components/ethitrust-theme-provider'
-import { QueryProvider } from '@/components/query-provider'
-import { ThemeProvider } from '@/components/theme-provider'
-import './globals.css'
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { AppToaster } from "@/components/app-toaster";
+import { SessionRoleGate } from "@/components/auth/session-role-gate";
+import { EthitrustThemeProvider } from "@/components/ethitrust-theme-provider";
+import { QueryProvider } from "@/components/query-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import "./globals.css";
 
 const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist',
-  display: 'swap',
-})
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
 const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-  display: 'swap',
-})
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
 const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  variable: '--font-instrument-serif',
-  display: 'swap',
-})
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: 'Ethi-Trust — B2B Escrow for Ethiopian Commerce',
+  title: "Ethi-Trust - C2C/B2C Escrow for Ethiopian Commerce",
   description:
-    'Ethi-Trust is the escrow management layer for Ethiopian B2B e-commerce. Create accounts, generate secure escrow links, and close trustful trades between buyers and sellers.',
-  generator: 'v0.app',
+    "Ethi-Trust is the escrow management layer for Ethiopian C2C/B2C e-commerce. Create accounts, generate secure escrow links, and close trustful trades between buyers and sellers.",
+  generator: "v0.app",
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
+        url: "/icon-light-32x32.png",
+        media: "(prefers-color-scheme: light)",
       },
       {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
+        url: "/icon-dark-32x32.png",
+        media: "(prefers-color-scheme: dark)",
       },
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: "/icon.svg",
+        type: "image/svg+xml",
       },
     ],
-    apple: '/apple-icon.png',
+    apple: "/apple-icon.png",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html
@@ -75,8 +75,8 @@ export default function RootLayout({
             </QueryProvider>
           </EthitrustThemeProvider>
         </ThemeProvider>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
-  )
+  );
 }

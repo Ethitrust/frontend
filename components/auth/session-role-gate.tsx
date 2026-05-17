@@ -12,6 +12,11 @@ function onAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin");
 }
 
+/** Auth entry pages — once signed in, the user should not stay here. */
+function isSignedInForbiddenAuthPath(pathname: string): boolean {
+  return pathname === "/signin" || pathname === "/signup";
+}
+
 /** Routes platform admins may open without going to `/admin`. */
 function isPublicAuthPath(pathname: string): boolean {
   return (
@@ -42,6 +47,12 @@ export function SessionRoleGate({ children }: { children: ReactNode }) {
     if (!accessToken || !meQuery.isSuccess || !meQuery.data) return;
 
     const admin = isPlatformAdminRole(meQuery.data.role);
+
+    // Already signed in — bounce away from /signin and /signup.
+    if (isSignedInForbiddenAuthPath(pathname)) {
+      router.replace(admin ? "/admin" : "/dashboard");
+      return;
+    }
 
     if (onAdminPath(pathname) && !admin) {
       router.replace("/dashboard");
