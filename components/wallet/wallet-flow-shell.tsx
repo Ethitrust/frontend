@@ -13,11 +13,17 @@ export function WalletFlowShell({
   title,
   description,
   contentClassName = 'max-w-2xl',
+  backHref = '/wallet',
+  backLabel = 'Back to wallet',
+  eyebrow = 'Payments',
   children,
 }: {
   title: string
   description?: ReactNode
   contentClassName?: string
+  backHref?: string
+  backLabel?: string
+  eyebrow?: string
   children: ReactNode
 }) {
   const e = ethitrustThemeTokens
@@ -29,13 +35,13 @@ export function WalletFlowShell({
         asChild
         className="-ml-2 mb-6 gap-2 text-muted-foreground"
       >
-        <Link href="/wallet">
+        <Link href={backHref}>
           <ArrowLeft className="size-4" aria-hidden />
-          Back to wallet
+          {backLabel}
         </Link>
       </Button>
       <header className="max-w-3xl">
-        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>Payments</p>
+        <p className={cn(e.typography.eyebrow, 'text-muted-foreground')}>{eyebrow}</p>
         <h1
           className={cn(e.typography.displayLG, 'mt-2 font-serif font-normal text-foreground')}
         >

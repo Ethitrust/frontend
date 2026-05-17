@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,37 +26,85 @@ import {
 } from "@/components/ui/select";
 import { WalletFlowShell } from "@/components/wallet/wallet-flow-shell";
 import { WalletPaymentsGate } from "@/components/wallet/wallet-payments-gate";
+import { fetchAuthMe } from "@/lib/auth/me-session-api";
+import { fetchOrgMembers } from "@/lib/org/org-organizations-api";
 import {
-  fetchMeWalletList,
+  fetchOrgWalletList,
+  postOrgWalletWithdraw,
+} from "@/lib/org/org-wallet-api";
+import {
   fetchSupportedBanks,
   pickDefaultWalletId,
-  postWithdrawFromWallet,
 } from "@/lib/wallets/me-wallet-api";
 import type { WalletRow } from "@/lib/wallets/wallet-types";
 
-export function WalletWithdrawView() {
+export function OrgWalletWithdrawView({
+  orgId,
+  initialWalletId,
+}: {
+  orgId: string;
+  initialWalletId?: string;
+}) {
   return (
     <WalletPaymentsGate
-      title="Withdraw funds"
-      description="Move money from your Ethi-Trust balance to your own bank account."
+      title="Withdraw from org wallet"
+      description="Move money from this organization's balance to a beneficiary bank account."
     >
-      {(accessToken) => <WalletWithdrawSignedIn accessToken={accessToken} />}
+      {(accessToken) => (
+        <OrgWalletWithdrawSignedIn
+          accessToken={accessToken}
+          orgId={orgId}
+          initialWalletId={initialWalletId}
+        />
+      )}
     </WalletPaymentsGate>
   );
 }
 
-function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
-  const [walletId, setWalletId] = useState("");
+function OrgWalletWithdrawSignedIn({
+  accessToken,
+  orgId,
+  initialWalletId,
+}: {
+  accessToken: string;
+  orgId: string;
+  initialWalletId?: string;
+}) {
+  const queryClient = useQueryClient();
+
+  const [walletId, setWalletId] = useState(initialWalletId ?? "");
   const [amount, setAmount] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
-  const [bankId, setBankId] = useState<number | null>(null);
+  const [bankId, setBankId] = useState<number | null>(855);
   const [description, setDescription] = useState("");
 
   const walletsQuery = useQuery({
-    queryKey: ["me", "wallets"],
-    queryFn: () => fetchMeWalletList(accessToken),
-    enabled: Boolean(accessToken),
+    queryKey: ["org", orgId, "wallets"],
+    queryFn: () => fetchOrgWalletList(accessToken, orgId),
+    enabled: Boolean(accessToken && orgId),
   });
+
+  const membersQuery = useQuery({
+    queryKey: ["me", "organizations", orgId, "members"],
+    queryFn: () => fetchOrgMembers(accessToken, orgId),
+    enabled: Boolean(accessToken && orgId),
+    staleTime: 60_000,
+  });
+
+  const meQuery = useQuery({
+    queryKey: ["me", "auth", "me"],
+    queryFn: () => fetchAuthMe(accessToken),
+    enabled: Boolean(accessToken),
+    staleTime: 5 * 60_000,
+  });
+
+  const currentUserId = meQuery.data?.id;
+  const myMember = (membersQuery.data ?? []).find(
+    (m) => m.user_id === currentUserId,
+  );
+  const myRole = myMember?.role ?? "member";
+  const canWithdraw = myRole === "owner";
+  const membershipReady = !membersQuery.isPending && !meQuery.isPending;
 
   useEffect(() => {
     const list = walletsQuery.data;
@@ -93,8 +141,8 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
   );
 
   const withdrawMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof postWithdrawFromWallet>[2]) =>
-      postWithdrawFromWallet(accessToken, walletId, payload),
+    mutationFn: (body: Parameters<typeof postOrgWalletWithdraw>[3]) =>
+      postOrgWalletWithdraw(accessToken, orgId, walletId, body),
     onSuccess: () => {
       toast.success("Withdrawal request accepted", {
         description:
@@ -103,6 +151,12 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
       setAmount("");
       setDescription("");
       setAccountNumber("");
+      void queryClient.invalidateQueries({
+        queryKey: ["org", orgId, "wallets"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["org", orgId, "wallet", walletId, "transactions"],
+      });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -123,10 +177,16 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
       toast.error("Account number is required");
       return;
     }
+    const code = bankId;
+    if (!code) {
+      toast.error("Select or enter a bank identifier");
+      return;
+    }
+
     withdrawMutation.mutate({
       amount: n,
       account_number: acct,
-      bank_code: bankId,
+      bank_code: code,
       description: description.trim(),
     });
   }
@@ -137,9 +197,20 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
   return (
     <WalletFlowShell
       title="Withdraw funds"
-      description="Transfers use our supported payout network. Pick your bank from the list when it loads, or enter your bank’s identifier manually if the list is unavailable."
+      description="Transfers use our supported payout network. Pick the beneficiary bank from the list, or enter a bank identifier manually if the list is unavailable."
+      backHref={`/org/${orgId}/wallet`}
+      backLabel="Back to org wallet"
+      eyebrow="Organization"
     >
-      {!walletsQuery.data && walletsQuery.isPending ? (
+      {membershipReady && !canWithdraw ? (
+        <Alert variant="destructive">
+          <AlertTitle>You don&apos;t have permission</AlertTitle>
+          <AlertDescription>
+            Withdrawals from an organization wallet are restricted to the org
+            owner. Please ask the owner to perform this action.
+          </AlertDescription>
+        </Alert>
+      ) : !walletsQuery.data && walletsQuery.isPending ? (
         <p className="text-sm text-muted-foreground">Loading wallets…</p>
       ) : walletsQuery.isError ? (
         <Alert variant="destructive">
@@ -150,6 +221,13 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
               : "Request failed"}
           </AlertDescription>
         </Alert>
+      ) : !walletsQuery.data?.length ? (
+        <Alert>
+          <AlertTitle>No wallets</AlertTitle>
+          <AlertDescription>
+            This organization has no wallets to withdraw from.
+          </AlertDescription>
+        </Alert>
       ) : (
         <Card className="shadow-sm">
           <CardHeader>
@@ -157,15 +235,15 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
               Bank payout
             </CardTitle>
             <CardDescription>
-              Available balance limits apply. Ensure the account name matches
-              KYC records where required.
+              Available balance limits apply. Ensure the account details belong
+              to the organization or its designated beneficiary.
             </CardDescription>
           </CardHeader>
           <form onSubmit={onSubmit}>
             <CardContent className="space-y-6">
               {walletsQuery.data && walletsQuery.data.length > 1 ? (
                 <div className="space-y-2">
-                  <Label htmlFor="withdraw-wallet">Wallet</Label>
+                  <Label htmlFor="org-withdraw-wallet">Wallet</Label>
                   <Select
                     value={walletId}
                     onValueChange={(v) => {
@@ -174,7 +252,7 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
                     }}
                   >
                     <SelectTrigger
-                      id="withdraw-wallet"
+                      id="org-withdraw-wallet"
                       className="w-full rounded-lg"
                     >
                       <SelectValue placeholder="Select wallet" />
@@ -191,11 +269,11 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
               ) : null}
 
               <div className="space-y-2">
-                <Label htmlFor="withdraw-amt">
+                <Label htmlFor="org-withdraw-amt">
                   Amount {walletCurrency ? `(${walletCurrency})` : ""}
                 </Label>
                 <Input
-                  id="withdraw-amt"
+                  id="org-withdraw-amt"
                   inputMode="decimal"
                   placeholder="0"
                   value={amount}
@@ -211,13 +289,13 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
                 </p>
               ) : showBankSelect ? (
                 <div className="space-y-2">
-                  <Label htmlFor="withdraw-bank">Bank</Label>
+                  <Label htmlFor="org-withdraw-bank">Bank</Label>
                   <Select
                     value={bankId != null ? String(bankId) : ""}
                     onValueChange={(v) => setBankId(Number(v))}
                   >
                     <SelectTrigger
-                      id="withdraw-bank"
+                      id="org-withdraw-bank"
                       className="w-full rounded-lg"
                     >
                       <SelectValue placeholder="Select bank" />
@@ -250,8 +328,8 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
                         {banksQuery.error instanceof Error
                           ? banksQuery.error.message
                           : " Could not load the bank list"}{" "}
-                        — enter your bank identifier manually if you know it
-                        (your bank or Ethi-Trust support can supply it).
+                        — enter the payout bank identifier manually if you know
+                        it.
                       </AlertDescription>
                     </Alert>
                   ) : banksQuery.isSuccess ? (
@@ -265,11 +343,11 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
                   ) : null}
 
                   <div className="space-y-2">
-                    <Label htmlFor="withdraw-bank-manual">
+                    <Label htmlFor="org-withdraw-bank-manual">
                       Bank identifier
                     </Label>
                     <Input
-                      id="withdraw-bank-manual"
+                      id="org-withdraw-bank-manual"
                       placeholder="Matches provider bank identifier"
                       value={bankId != null ? String(bankId) : ""}
                       onChange={(ev) => setBankId(Number(ev.target.value))}
@@ -281,9 +359,9 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="withdraw-acct">Account number</Label>
+                <Label htmlFor="org-withdraw-acct">Account number</Label>
                 <Input
-                  id="withdraw-acct"
+                  id="org-withdraw-acct"
                   inputMode="numeric"
                   placeholder="Beneficiary account"
                   value={accountNumber}
@@ -294,9 +372,9 @@ function WalletWithdrawSignedIn({ accessToken }: { accessToken: string }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="withdraw-desc">Description</Label>
+                <Label htmlFor="org-withdraw-desc">Description</Label>
                 <Input
-                  id="withdraw-desc"
+                  id="org-withdraw-desc"
                   placeholder="Optional memo for payout"
                   value={description}
                   onChange={(ev) => setDescription(ev.target.value)}

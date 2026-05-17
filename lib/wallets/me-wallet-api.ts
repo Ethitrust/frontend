@@ -149,7 +149,7 @@ export async function postWithdrawFromWallet(
   body: {
     amount: number;
     account_number: string;
-    bank_code: string;
+    bank_code: number | null;
     description: string;
   },
 ): Promise<unknown> {
