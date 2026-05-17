@@ -1,4 +1,20 @@
-/** Shapes from `docs/apidoc.md` — org-escrows */
+/**
+ * Types for the nested org-escrow surface:
+ *   /api/v1/organizations/{org_id}/escrows/*
+ *
+ * Authorization: user bearer token; server enforces org membership/role.
+ */
+
+/** Public escrow statuses the org-escrow surface returns. */
+export type OrgEscrowStatus =
+  | 'invited'
+  | 'pending'
+  | 'active'
+  | 'submitted'
+  | 'completed'
+  | 'cancelled'
+  | 'disputed'
+  | 'expired'
 
 export type OrgEscrowVolumePoint = {
   date: string
@@ -12,25 +28,29 @@ export type OrgEscrowReportSummary = {
   period_to: string
   total_escrows: number
   active_escrow_count: number
+  /** 0–1 */
   completion_rate: number
+  /** 0–1 */
   dispute_rate: number
-  avg_settlement_time_hours: number
+  avg_settlement_time_hours: number | null
   volume_over_time: OrgEscrowVolumePoint[]
 }
 
 export type OrgEscrowListItem = {
   escrow_id: string
-  organization_id: string
+  organization_id: string | null
   title: string
+  /** See {@link OrgEscrowStatus}; the server may return other internal statuses. */
   status: string
   is_active: boolean
+  /** Amount in birr (not cents). */
   amount: number
   currency: string
-  receiver_email: string
+  receiver_email: string | null
   funded_amount: number
   created_at: string
   updated_at: string
-  expires_at?: string | null
+  expires_at: string | null
 }
 
 export type OrgEscrowsListResponse = {
@@ -41,10 +61,26 @@ export type OrgEscrowsListResponse = {
   total_pages: number
 }
 
+/** `GET /escrows/{escrow_id}` — status flags. */
+export type OrgEscrowStatusFlags = {
+  escrow_id: string
+  organization_id: string | null
+  status: string
+  is_active: boolean
+  can_cancel: boolean
+  can_resend_invite: boolean
+  can_accept: boolean
+  expires_at: string | null
+  funded_amount: number
+  currency: string
+  amount: number
+  updated_at: string
+}
+
 export type OrgEscrowRiskFlag = {
   code: string
   message: string
-  severity: string
+  severity: 'low' | 'medium' | 'high' | string
 }
 
 export type OrgEscrowLatestEvent = {
@@ -54,31 +90,21 @@ export type OrgEscrowLatestEvent = {
   metadata?: Record<string, unknown> | null
 }
 
-export type OrgEscrowDetail = {
-  escrow_id: string
-  organization_id: string
-  status: string
-  is_active: boolean
-  can_cancel: boolean
-  can_resend_invite: boolean
-  can_accept: boolean
-  expires_at: string
-  funded_amount: number
-  currency: string
-  amount: number
-  updated_at: string
+/** `GET /escrows/{escrow_id}/detail` — extends the status-flags payload. */
+export type OrgEscrowDetail = OrgEscrowStatusFlags & {
   title: string
-  description: string
+  description: string | null
   escrow_type: string
   initiator_role: string
-  receiver_email: string
-  receiver_id?: string | null
+  receiver_email: string | null
+  receiver_id: string | null
   fee_amount: number
   who_pays_fees: string
   created_at: string
+  /** 0–100 */
   progress_percentage: number
   current_phase: string
-  next_action: string
+  next_action: string | null
   risk_flags: OrgEscrowRiskFlag[]
   latest_event?: OrgEscrowLatestEvent | null
 }
@@ -86,6 +112,7 @@ export type OrgEscrowDetail = {
 export type OrgEscrowAuditEventItem = {
   event_id: string
   escrow_id: string
+  /** e.g. `"user:{id}"`, `"system"`, `"admin"`. */
   actor: string
   action: string
   timestamp: string
@@ -112,7 +139,7 @@ export type OrgWebhookLogRow = {
   id: string
   event_type: string
   target_url: string
-  http_status: number
+  http_status: number | null
   attempt: number
   delivery_status: string
   error_message?: string | null
@@ -120,10 +147,25 @@ export type OrgWebhookLogRow = {
   next_retry_at?: string | null
 }
 
-export type OrgEscrowCreateResponse = {
+/**
+ * Common envelope for org-escrow mutation responses (currently: cancel).
+ *
+ * NOTE: Creation is intentionally NOT exposed on this dashboard surface —
+ * organizations create escrows via the API only — so there is no
+ * `OrgEscrowCreateResponse`. Mirror the user-side EscrowResponse shape for
+ * the fields we expect to read back.
+ */
+export type OrgEscrowMutationResponse = {
   id: string
-  escrow_type: string
   status: string
+  amount?: number
+  currency?: string
+  escrow_type?: string
   title?: string
   org_id?: string
+}
+
+/** `POST /escrows/{escrow_id}/cancel` response shape. */
+export type OrgEscrowCancelResponse = OrgEscrowMutationResponse & {
+  refunded: boolean
 }
