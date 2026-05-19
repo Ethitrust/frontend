@@ -84,14 +84,32 @@ type ForensicsResponse = {
   total: number;
 };
 
+type ChatAnalysisIntentEntry = {
+  message_index?: number | null;
+  message_id?: string | null;
+  quote?: string | null;
+  explanation?: string | null;
+};
+
+type ChatAnalysisFlaggedMessage = {
+  message_index?: number | null;
+  message_id?: string | null;
+  category?: string | null;
+  quote?: string | null;
+  explanation?: string | null;
+};
+
 type ChatAnalysisItem = {
   id: string;
   provider: string;
   model: string;
   status: string;
   risk_level: string | null;
-  detected_intents: string[] | null;
-  flagged_messages: unknown[] | null;
+  detected_intents:
+    | Record<string, ChatAnalysisIntentEntry[] | null | undefined>
+    | string[]
+    | null;
+  flagged_messages: ChatAnalysisFlaggedMessage[] | null;
   summary: string | null;
   recommendation: string | null;
   error: string | null;
@@ -873,6 +891,37 @@ function PreDisputeChatView({
   );
 }
 
+function formatIntentLabel(key: string) {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function normalizeDetectedIntents(
+  detected: ChatAnalysisItem["detected_intents"],
+): Array<{ key: string; label: string; count: number }> {
+  if (!detected) return [];
+  if (Array.isArray(detected)) {
+    return detected
+      .filter((item): item is string => typeof item === "string" && item.length > 0)
+      .map((item) => ({ key: item, label: formatIntentLabel(item), count: 0 }));
+  }
+  if (typeof detected === "object") {
+    return Object.entries(
+      detected as Record<string, ChatAnalysisIntentEntry[] | null | undefined>,
+    )
+      .map(([key, value]) => ({
+        key,
+        label: formatIntentLabel(key),
+        count: Array.isArray(value) ? value.length : 0,
+      }))
+      .filter((entry) => entry.count > 0);
+  }
+  return [];
+}
+
 function CaseAnalysisView({
   data,
   isPending,
@@ -903,9 +952,11 @@ function CaseAnalysisView({
     );
   }
 
-  const flaggedCount = Array.isArray(analysis.flagged_messages)
-    ? analysis.flagged_messages.length
-    : 0;
+  const flaggedMessages = Array.isArray(analysis.flagged_messages)
+    ? analysis.flagged_messages
+    : [];
+  const flaggedCount = flaggedMessages.length;
+  const intents = normalizeDetectedIntents(analysis.detected_intents);
 
   return (
     <div className="space-y-4">
@@ -959,25 +1010,66 @@ function CaseAnalysisView({
         </div>
       )}
 
-      {Array.isArray(analysis.detected_intents) &&
-        analysis.detected_intents.length > 0 && (
+      {intents.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Detected intents
+          </p>
           <div className="flex flex-wrap gap-2">
-            {analysis.detected_intents.map((intent) => (
+            {intents.map((intent) => (
               <span
-                key={intent}
-                className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground"
+                key={intent.key}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground"
               >
-                {intent}
+                {intent.label}
+                {intent.count > 0 && (
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                    {intent.count}
+                  </span>
+                )}
               </span>
             ))}
           </div>
-        )}
+        </div>
+      )}
 
       {flaggedCount > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {flaggedCount} message{flaggedCount === 1 ? "" : "s"} need closer
-          review in the pre-dispute chat.
-        </p>
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Flagged messages ({flaggedCount})
+          </p>
+          <div className="space-y-2">
+            {flaggedMessages.map((fm, idx) => (
+              <div
+                key={`${fm.message_id ?? idx}-${idx}`}
+                className="rounded-lg border border-border bg-card p-3 text-xs"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  {fm.category && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                      {formatIntentLabel(fm.category)}
+                    </span>
+                  )}
+                  {typeof fm.message_index === "number" && (
+                    <span className="text-[10px] text-muted-foreground">
+                      Message #{fm.message_index}
+                    </span>
+                  )}
+                </div>
+                {fm.quote && (
+                  <blockquote className="mt-2 border-l-2 border-border pl-3 text-sm italic text-foreground">
+                    &ldquo;{fm.quote}&rdquo;
+                  </blockquote>
+                )}
+                {fm.explanation && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {fm.explanation}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1189,14 +1281,10 @@ function latestUsableAnalysis(data: unknown) {
   const payload = data as ChatAnalysesResponse | null;
   const analyses = payload?.analyses ?? [];
   return [...analyses]
-    .filter((analysis) => {
-      const source = `${analysis.provider} ${analysis.model}`.toLowerCase();
-      return (
-        analysis.status?.toLowerCase() === "completed" &&
-        !analysis.error &&
-        /grok|xai/.test(source)
-      );
-    })
+    .filter(
+      (analysis) =>
+        analysis.status?.toLowerCase() === "completed" && !analysis.error,
+    )
     .sort(
       (a, b) =>
         new Date(b.completed_at ?? b.created_at).getTime() -

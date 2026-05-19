@@ -133,14 +133,32 @@ type ThreadMessage = {
   reply_to_message?: ThreadMessageReplyPreview | null;
 };
 
+type ChatAnalysisIntentEntry = {
+  message_index?: number | null;
+  message_id?: string | null;
+  quote?: string | null;
+  explanation?: string | null;
+};
+
+type ChatAnalysisFlaggedMessage = {
+  message_index?: number | null;
+  message_id?: string | null;
+  category?: string | null;
+  quote?: string | null;
+  explanation?: string | null;
+};
+
 type ChatAnalysisItem = {
   id: string;
   provider: string;
   model: string;
   status: string;
   risk_level: string | null;
-  detected_intents: string[] | null;
-  flagged_messages: unknown[] | null;
+  detected_intents:
+    | Record<string, ChatAnalysisIntentEntry[] | null | undefined>
+    | string[]
+    | null;
+  flagged_messages: ChatAnalysisFlaggedMessage[] | null;
   summary: string | null;
   recommendation: string | null;
   error: string | null;
